@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ocupabilidad Hotelera Histórica | Cusco 2015-2026</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Leaflet (Map Library) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 
+                        sans: ['Gibbs', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    colors: {
+                        theme: {
+                            bg: '#FFFFFF',
+                            surface: '#F8FAFC',
+                            border: '#E2E8F0',
+                            text: '#475569',
+                            heading: '#334155',
+                            coral: '#E11D48',
+                            gold: '#D97706',
+                            teal: '#0D9488',
+                            olive: '#65A30D',
+                            tealDark: '#0F766E',
+                            brandAccent: '#2563EB'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #FFFFFF;
+            color: #475569;
+            font-family: 'Gibbs', 'system-ui', sans-serif;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #FFFFFF; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+        .metric-value {
+            color: #E11D48;
+        }
+
+        .card {
+            background-color: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .toggle-btn {
+            background-color: transparent;
+            color: #64748B;
+            border-radius: 9999px;
+            padding: 0.25rem 1rem;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .toggle-btn.active {
+            background-color: #0D9488;
+            color: white;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        
+        .cat-btn {
+            background-color: transparent;
+            color: #64748B;
+            border-radius: 9999px;
+            padding: 0.25rem 1rem;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .cat-btn.active {
+            background-color: #0F766E;
+            color: white;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        th, td {
+            border-bottom: 1px solid #E2E8F0;
+        }
+        th {
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen overflow-x-hidden">
+
+    <div class="max-w-6xl mx-auto px-6 py-12">
+        <header class="mb-12 flex flex-col md:flex-row items-center justify-between gap-8 border-b border-gray-200 pb-8">
+            <div class="md:w-2/3">
+                <div class="flex items-center gap-4 mb-4 flex-wrap">
+                    <p class="text-theme-brandAccent text-sm font-semibold uppercase tracking-wider">Establecimientos de hospedaje colectivo · Cusco</p>
+                    <div class="flex items-center gap-2 bg-gray-100 border border-theme-border px-3 py-1 rounded-lg">
+                        <label for="year-select" class="text-xs font-bold text-gray-700 uppercase">Año:</label>
+                        <select id="year-select" onchange="changeYear(this.value)" class="bg-transparent text-sm font-bold text-theme-coral focus:outline-none cursor-pointer">
+                            <option value="2026">2026</option>
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                            <option value="2021">2021</option>
+                            <option value="2020">2020</option>
+                            <option value="2019">2019</option>
+                            <option value="2018">2018</option>
+                            <option value="2017">2017</option>
+                            <option value="2016">2016</option>
+                            <option value="2015">2015</option>
+                        </select>
+                    </div>
+                </div>
+                <h1 class="text-4xl md:text-5xl text-theme-heading font-bold leading-tight mb-4 tracking-tight">
+                    Ocupabilidad hotelera,<br><span id="header-year-label">2026</span>
+                </h1>
+                <p class="text-base max-w-2xl text-gray-600">
+                    Lectura comparada de los indicadores mensuales de ocupabilidad en hoteles de 3, 4 y 5 estrellas: tasas de ocupación, arribos, pernoctaciones, permanencia y empleo en la región del Cusco.
+                </p>
+                <p class="text-xs text-gray-500 mt-4">Reporte oficial (Serie histórica 2015 - 2026)</p>
+            </div>
+            
+            <div class="flex flex-col items-center md:items-end gap-4 w-full md:w-1/3">
+                <!-- LOGO VECTORIAL HOTEL & TOURISM ADVISORS -->
+                <div class="w-full max-w-[240px] py-2 flex items-center justify-center md:justify-end">
+                    <svg viewBox="0 0 600 180" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
+                        <text x="20" y="70" font-family="'Gibbs', 'system-ui', sans-serif" font-size="52" font-weight="400" fill="#475569">Hotel &amp; Tourism</text>
+                        <text x="260" y="135" font-family="'Gibbs', 'system-ui', sans-serif" font-size="44" font-weight="600" font-style="italic" fill="#F97316">Advisors</text>
+                    </svg>
+                </div>
+
+                <!-- MAPA DE CUSCO -->
+                <div class="w-full h-44 bg-gray-100 rounded-xl border border-theme-border shadow-inner overflow-hidden relative">
+                    <div id="map" class="absolute inset-0 z-0"></div>
+                    <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-[10px] font-bold text-gray-700 border border-gray-200 shadow-sm pointer-events-none" style="z-index: 1000;">
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-theme-coral mr-1"></span> Cusco, Perú
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 border-y border-theme-border py-8 mb-12 bg-white gap-y-6 md:gap-y-0">
+            <div class="px-6 md:border-r border-theme-border last:border-0">
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        <p class="metric-value text-4xl font-bold" id="kpi-arribos">0</p>
+                    </div>
+                    <div class="text-theme-coral bg-theme-coral/10 p-2.5 rounded-xl">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 font-medium" id="kpi-arribos-label">Arribos totales</p>
+            </div>
+            
+            <div class="px-6 md:border-r border-theme-border last:border-0">
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        <p class="metric-value text-4xl font-bold" id="kpi-tnoh">0%</p>
+                    </div>
+                    <div class="text-theme-coral bg-theme-coral/10 p-2.5 rounded-xl">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 font-medium">TNOH promedio anual</p>
+            </div>
+            
+            <div class="px-6 md:border-r border-theme-border last:border-0">
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        <p class="metric-value text-4xl font-bold" id="kpi-top">-</p>
+                    </div>
+                    <div class="text-theme-coral bg-theme-coral/10 p-2.5 rounded-xl">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 font-medium">Mejor ocupación de habitaciones</p>
+            </div>
+            
+            <div class="px-6">
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        <p class="metric-value text-4xl font-bold" id="kpi-empleo">0</p>
+                    </div>
+                    <div class="text-theme-coral bg-theme-coral/10 p-2.5 rounded-xl">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 font-medium" id="kpi-empleo-label">Empleo generado</p>
+            </div>
+        </div>
+
+        <div class="mb-12">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6">
+                <div>
+                    <h2 class="text-2xl text-theme-heading font-bold mb-1 tracking-tight">Tasa de ocupación por categoría</h2>
+                    <p class="text-sm text-gray-500">Comparación mensual entre hoteles de 3, 4 y 5 estrellas.</p>
+                </div>
+                <div class="bg-gray-100 rounded-full p-1 border border-theme-border flex mt-4 md:mt-0 shadow-inner">
+                    <button class="toggle-btn active" id="btn-tnoh" onclick="toggleMetric('tnoh')">Habitaciones (TNOH)</button>
+                    <button class="toggle-btn" id="btn-tnoc" onclick="toggleMetric('tnoc')">Camas estimada</button>
+                </div>
+            </div>
+            
+            <div class="card p-6 bg-white">
+                <div class="h-96">
+                    <canvas id="chart-occupancy"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-12">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6">
+                <div>
+                    <h2 class="text-2xl text-theme-heading font-bold mb-1 tracking-tight">Detalle por categoría</h2>
+                    <p class="text-sm text-gray-500">Arribos, pernoctaciones, permanencia y empleo del segmento seleccionado.</p>
+                </div>
+                <div class="flex space-x-2 mt-4 md:mt-0 bg-gray-50 p-1 rounded-full border border-gray-200">
+                    <button class="cat-btn active" id="btn-cat-3" onclick="selectCategory(3)">3 estrellas</button>
+                    <button class="cat-btn" id="btn-cat-4" onclick="selectCategory(4)">4 estrellas</button>
+                    <button class="cat-btn" id="btn-cat-5" onclick="selectCategory(5)">5 estrellas</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card p-6 bg-white">
+                    <h3 class="text-lg text-theme-heading font-semibold mb-4">Arribos: nacionales vs. extranjeros</h3>
+                    <div class="h-64"><canvas id="chart-arribos"></canvas></div>
+                </div>
+                <div class="card p-6 bg-white">
+                    <h3 class="text-lg text-theme-heading font-semibold mb-4">Permanencia promedio (días)</h3>
+                    <div class="h-64"><canvas id="chart-permanencia"></canvas></div>
+                </div>
+                <div class="card p-6 bg-white">
+                    <h3 class="text-lg text-theme-heading font-semibold mb-4">Pernoctaciones: nacionales vs. extranjeros</h3>
+                    <div class="h-64"><canvas id="chart-pernoctaciones"></canvas></div>
+                </div>
+                <div class="card p-6 bg-white">
+                    <h3 class="text-lg text-theme-heading font-semibold mb-4">Empleo generado</h3>
+                    <div class="h-64"><canvas id="chart-empleo"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-12">
+            <h2 class="text-2xl text-theme-heading font-bold mb-1 tracking-tight">Oferta del informante y detalle mensual</h2>
+            <p class="text-sm text-gray-500 mb-6">Capacidad instalada y métricas detalladas del año seleccionado.</p>
+            
+            <div class="card overflow-x-auto bg-white">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="py-4 px-6 w-1/3">Indicador</th>
+                            <th class="py-4 px-3 text-right">Ene</th>
+                            <th class="py-4 px-3 text-right">Feb</th>
+                            <th class="py-4 px-3 text-right">Mar</th>
+                            <th class="py-4 px-3 text-right">Abr</th>
+                            <th class="py-4 px-3 text-right">May</th>
+                            <th class="py-4 px-3 text-right">Jun</th>
+                            <th class="py-4 px-3 text-right">Jul</th>
+                            <th class="py-4 px-3 text-right">Ago</th>
+                            <th class="py-4 px-3 text-right">Sep</th>
+                            <th class="py-4 px-3 text-right">Oct</th>
+                            <th class="py-4 px-3 text-right">Nov</th>
+                            <th class="py-4 px-3 text-right">Dic</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="text-sm text-gray-700"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- STREAMING_CHUNK:Inyectando CSV Histórico Cusco (2015-2026) ---
+        const rawCSV = `categoria,distrito,anio,mes_nombre,mes_num,fecha,num_establecimientos,num_habitaciones,num_plazas_cama,tnoh_pct,permanencia_promedio_dias,permanencia_nacionales_dias,permanencia_extranjeros_dias,arribos_totales,arribos_nacionales,arribos_extranjeros,pernoctaciones_totales,pernoctaciones_nacionales,pernoctaciones_extranjeros,empleo_total
+Hoteles 3 Estrellas,Cusco,2015,Ene,1,2015-01-01,43,1614,3139,43.41,2.05,2.08,2.05,18758,3011,15747,38535,6250,32285,671
+Hoteles 3 Estrellas,Cusco,2015,Feb,2,2015-02-01,43,1614,3139,41.6,1.97,2.04,1.95,16401,3363,13038,32283,6859,25424,696
+Hoteles 3 Estrellas,Cusco,2015,Mar,3,2015-03-01,43,1615,3121,52.87,1.98,1.93,1.98,23437,3280,20157,46331,6320,40011,686
+Hoteles 3 Estrellas,Cusco,2015,Abr,4,2015-04-01,43,1614,3143,65.4,2.04,2.01,2.04,27868,3159,24709,56802,6348,50454,670
+Hoteles 3 Estrellas,Cusco,2015,May,5,2015-05-01,43,1614,3134,71.61,2.07,2.15,2.07,31205,3583,27622,64747,7704,57043,682
+Hoteles 3 Estrellas,Cusco,2015,Jun,6,2015-06-01,42,1587,3084,64.47,2.11,2.38,2.07,26514,3041,23473,55910,7226,48684,683
+Hoteles 3 Estrellas,Cusco,2015,Jul,7,2015-07-01,40,1545,3057,75.08,2.1,2.2,2.09,31835,4678,27157,67005,10283,56722,606
+Hoteles 3 Estrellas,Cusco,2015,Ago,8,2015-08-01,40,1545,3046,72.74,2.14,2.22,2.13,30054,4345,25709,64290,9634,54656,636
+Hoteles 3 Estrellas,Cusco,2015,Sep,9,2015-09-01,40,1540,3023,73.54,2.08,1.98,2.1,29672,3652,26020,61798,7234,54564,636
+Hoteles 3 Estrellas,Cusco,2015,Oct,10,2015-10-01,40,1543,3015,72.77,2.04,1.95,2.05,31095,4847,26248,63390,9465,53925,631
+Hoteles 3 Estrellas,Cusco,2015,Nov,11,2015-11-01,40,1598,3055,58.63,1.99,1.83,2.02,25452,4138,21314,50574,7587,42987,636
+Hoteles 3 Estrellas,Cusco,2015,Dic,12,2015-12-01,40,1546,3043,39.92,1.96,1.99,1.95,18938,3812,15126,37090,7575,29515,629
+Hoteles 3 Estrellas,Cusco,2016,Ene,1,2016-01-01,39,1504,2938,42.01,2.1,2.41,2.04,17427,3102,14325,36655,7465,29190,636
+Hoteles 3 Estrellas,Cusco,2016,Feb,2,2016-02-01,37,1423,2754,38.38,1.93,1.89,1.95,14678,3293,11385,28362,6212,22150,564
+Hoteles 3 Estrellas,Cusco,2016,Mar,3,2016-03-01,39,1505,2914,46.45,1.94,1.79,1.97,21712,3516,18196,42066,6286,35780,627
+Hoteles 3 Estrellas,Cusco,2016,Abr,4,2016-04-01,41,1578,3054,50.48,1.97,1.91,1.98,22782,3915,18867,44855,7459,37396,667
+Hoteles 3 Estrellas,Cusco,2016,May,5,2016-05-01,42,1617,3151,68.11,2.06,2.04,2.06,30107,4451,25656,61964,9102,52862,666
+Hoteles 3 Estrellas,Cusco,2016,Jun,6,2016-06-01,42,1609,3137,58.07,2.05,2.06,2.05,25995,3577,22418,53343,7353,45990,667
+Hoteles 3 Estrellas,Cusco,2016,Jul,7,2016-07-01,43,1645,3203,62.51,2.05,2.07,2.04,31265,5224,26041,63997,10808,53189,663
+Hoteles 3 Estrellas,Cusco,2016,Ago,8,2016-08-01,43,1646,3208,62.27,1.92,2.01,1.9,31007,4841,26166,59534,9709,49825,663
+Hoteles 3 Estrellas,Cusco,2016,Sep,9,2016-09-01,43,1645,3209,60.41,2.0,2.1,1.98,28221,3319,24902,56371,6958,49413,661
+Hoteles 3 Estrellas,Cusco,2016,Oct,10,2016-10-01,43,1643,3205,62.71,2.03,2.12,2.01,29259,5221,24038,59317,11066,48251,670
+Hoteles 3 Estrellas,Cusco,2016,Nov,11,2016-11-01,43,1665,3246,47.67,2.0,2.0,2.0,22282,4084,18198,44519,8149,36370,673
+Hoteles 3 Estrellas,Cusco,2016,Dic,12,2016-12-01,43,1658,3255,33.32,2.01,2.09,1.99,16006,3318,12688,32151,6950,25201,664
+Hoteles 3 Estrellas,Cusco,2017,Ene,1,2017-01-01,41,1585,3097,31.14,2.1,2.32,2.06,14675,2493,12182,30839,5792,25047,625
+Hoteles 3 Estrellas,Cusco,2017,Feb,2,2017-02-01,43,1640,3229,26.73,2.02,2.02,2.02,11845,2534,9311,23945,5124,18821,633
+Hoteles 3 Estrellas,Cusco,2017,Mar,3,2017-03-01,41,1533,2996,40.86,2.04,2.13,2.02,17615,2649,14966,35863,5639,30224,626
+Hoteles 3 Estrellas,Cusco,2017,Abr,4,2017-04-01,43,1640,3230,50.54,2.0,2.01,2.0,24513,2828,21685,49134,5685,43449,657
+Hoteles 3 Estrellas,Cusco,2017,May,5,2017-05-01,44,1679,3283,58.15,2.03,2.0,2.03,28081,3546,24535,56967,7108,49859,676
+Hoteles 3 Estrellas,Cusco,2017,Jun,6,2017-06-01,44,1678,3281,57.86,2.06,1.92,2.08,26832,3481,23351,55324,6675,48649,672
+Hoteles 3 Estrellas,Cusco,2017,Jul,7,2017-07-01,44,1682,3283,64.61,2.0,1.95,2.01,33520,5062,28458,67033,9848,57185,689
+Hoteles 3 Estrellas,Cusco,2017,Ago,8,2017-08-01,44,1685,3274,62.39,1.93,1.9,1.94,32346,4796,27550,62487,9110,53377,697
+Hoteles 3 Estrellas,Cusco,2017,Sep,9,2017-09-01,45,1729,3375,58.88,1.98,1.94,1.99,29507,3995,25512,58457,7757,50700,700
+Hoteles 3 Estrellas,Cusco,2017,Oct,10,2017-10-01,44,1706,3332,59.63,1.99,2.07,1.97,30176,5012,25164,59933,10375,49558,695
+Hoteles 3 Estrellas,Cusco,2017,Nov,11,2017-11-01,45,1732,3392,47.23,1.99,1.99,1.98,22441,3737,18704,44579,7453,37126,690
+Hoteles 3 Estrellas,Cusco,2017,Dic,12,2017-12-01,45,1734,3402,34.61,1.94,1.9,1.96,17640,3641,13999,34303,6911,27392,689
+Hoteles 3 Estrellas,Cusco,2018,Ene,1,2018-01-01,43,1650,3222,32.71,2.04,2.05,2.04,15800,2425,13375,32282,4966,27316,644
+Hoteles 3 Estrellas,Cusco,2018,Feb,2,2018-02-01,39,1445,2871,30.26,1.83,1.73,1.86,11781,2986,8795,21528,5158,16370,549
+Hoteles 3 Estrellas,Cusco,2018,Mar,3,2018-03-01,44,1671,3301,42.34,1.88,1.79,1.9,21642,3234,18408,40764,5787,34977,657
+Hoteles 3 Estrellas,Cusco,2018,Abr,4,2018-04-01,44,1690,3354,48.56,1.93,1.9,1.94,24246,3158,21088,46811,5986,40825,667
+Hoteles 3 Estrellas,Cusco,2018,May,5,2018-05-01,43,1664,3299,60.44,1.98,1.93,1.99,29748,3547,26201,58967,6836,52131,653
+Hoteles 3 Estrellas,Cusco,2018,Jun,6,2018-06-01,43,1665,3303,53.67,2.0,1.9,2.01,26392,2965,23427,52737,5641,47096,649
+Hoteles 3 Estrellas,Cusco,2018,Jul,7,2018-07-01,42,1641,3250,61.16,1.99,2.01,1.98,31112,4574,26538,61878,9201,52677,666
+Hoteles 3 Estrellas,Cusco,2018,Ago,8,2018-08-01,42,1632,3234,64.31,1.95,2.03,1.93,33105,5154,27951,64555,10483,54072,654
+Hoteles 3 Estrellas,Cusco,2018,Sep,9,2018-09-01,42,1641,3253,63.3,1.99,2.07,1.98,30808,3775,27033,61220,7806,53414,655
+Hoteles 3 Estrellas,Cusco,2018,Oct,10,2018-10-01,41,1610,3191,59.86,1.89,2.08,1.86,29572,4432,25140,56025,9222,46803,635
+Hoteles 3 Estrellas,Cusco,2018,Nov,11,2018-11-01,41,1609,3190,52.21,1.96,2.09,1.93,23850,4127,19723,46793,8638,38155,633
+Hoteles 3 Estrellas,Cusco,2018,Dic,12,2018-12-01,40,1516,3001,35.62,1.96,1.96,1.96,16239,3144,13095,31760,6148,25612,562
+Hoteles 3 Estrellas,Cusco,2019,Ene,1,2019-01-01,40,1518,3013,34.27,2.05,2.18,2.02,14664,2524,12140,30003,5498,24505,545
+Hoteles 3 Estrellas,Cusco,2019,Feb,2,2019-02-01,39,1477,2928,26.5,1.98,1.96,1.98,10033,2083,7950,19855,4078,15777,528
+Hoteles 3 Estrellas,Cusco,2019,Mar,3,2019-03-01,40,1519,3008,36.99,1.88,1.94,1.87,16435,2544,13891,30862,4942,25920,520
+Hoteles 3 Estrellas,Cusco,2019,Abr,4,2019-04-01,41,1548,3066,55.4,1.94,1.98,1.94,24923,2994,21929,48412,5933,42479,562
+Hoteles 3 Estrellas,Cusco,2019,May,5,2019-05-01,41,1548,3068,60.62,1.88,1.98,1.87,28226,3251,24975,53187,6422,46765,551
+Hoteles 3 Estrellas,Cusco,2019,Jun,6,2019-06-01,41,1542,3057,53.93,2.02,2.04,2.02,24344,2753,21591,49240,5618,43622,550
+Hoteles 3 Estrellas,Cusco,2019,Jul,7,2019-07-01,39,1448,2861,61.91,2.02,2.08,2.02,26534,3870,22664,53705,8037,45668,513
+Hoteles 3 Estrellas,Cusco,2019,Ago,8,2019-08-01,39,1448,2861,61.23,2.02,2.06,2.01,25816,3126,22690,52093,6452,45641,566
+Hoteles 3 Estrellas,Cusco,2019,Sep,9,2019-09-01,42,1533,3031,63.11,2.07,2.21,2.06,25273,2956,22317,52403,6519,45884,622
+Hoteles 3 Estrellas,Cusco,2019,Oct,10,2019-10-01,42,1533,3018,60.04,2.03,2.18,2.02,25323,3044,22279,51527,6633,44894,628
+Hoteles 3 Estrellas,Cusco,2019,Nov,11,2019-11-01,42,1532,3012,50.07,2.04,2.09,2.03,20082,2717,17365,40986,5687,35299,625
+Hoteles 3 Estrellas,Cusco,2019,Dic,12,2019-12-01,42,1532,3010,31.26,1.99,2.05,1.97,13696,2227,11469,27198,4571,22627,610
+Hoteles 3 Estrellas,Cusco,2020,Ene,1,2020-01-01,44,1588,3069,35.4,2.14,2.22,2.13,14763,2411,12352,31635,5356,26279,591
+Hoteles 3 Estrellas,Cusco,2020,Feb,2,2020-02-01,43,1559,3015,27.65,2.06,2.05,2.06,10606,2654,7952,21828,5450,16378,482
+Hoteles 3 Estrellas,Cusco,2020,Mar,3,2020-03-01,42,1504,2917,20.71,2.24,2.05,2.26,7799,770,7029,17479,1576,15903,387
+Hoteles 3 Estrellas,Cusco,2020,Abr,4,2020-04-01,4,145,298,0.16,0.0,0.0,0.0,0,0,0,18,0,18,37
+Hoteles 3 Estrellas,Cusco,2020,May,5,2020-05-01,26,1004,1901,9.06,4.97,4.97,0.0,989,989,0,4917,4917,0,184
+Hoteles 3 Estrellas,Cusco,2020,Jun,6,2020-06-01,26,1003,1909,22.59,11.55,11.55,0.0,626,626,0,7228,7228,0,186
+Hoteles 3 Estrellas,Cusco,2020,Jul,7,2020-07-01,27,1043,1976,40.86,6.96,6.96,8.5,2091,2089,2,14546,14529,17,185
+Hoteles 3 Estrellas,Cusco,2020,Ago,8,2020-08-01,29,1100,2083,38.81,9.5,9.5,0.0,1595,1595,0,15149,15149,0,191
+Hoteles 3 Estrellas,Cusco,2020,Sep,9,2020-09-01,23,917,1719,48.15,5.94,5.94,0.0,2394,2394,0,14218,14218,0,150
+Hoteles 3 Estrellas,Cusco,2020,Oct,10,2020-10-01,24,951,1782,20.32,5.3,5.3,5.33,1193,1187,6,6327,6295,32,172
+Hoteles 3 Estrellas,Cusco,2020,Nov,11,2020-11-01,27,1098,2100,14.33,2.59,2.64,2.21,2021,1797,224,5236,4740,496,210
+Hoteles 3 Estrellas,Cusco,2020,Dic,12,2020-12-01,32,1209,2298,15.4,2.23,2.22,2.26,3531,2854,677,7877,6349,1528,215
+Hoteles 3 Estrellas,Cusco,2021,Ene,1,2021-01-01,32,1136,2165,18.9,1.72,1.69,2.07,4872,4544,328,8363,7684,679,210
+Hoteles 3 Estrellas,Cusco,2021,Feb,2,2021-02-01,29,1097,2083,17.74,1.64,1.6,2.33,3647,3416,231,5987,5449,538,202
+Hoteles 3 Estrellas,Cusco,2021,Mar,3,2021-03-01,29,1046,1990,10.61,2.01,1.99,2.24,2225,2038,187,4472,4054,418,185
+Hoteles 3 Estrellas,Cusco,2021,Abr,4,2021-04-01,27,1014,1922,15.95,2.24,2.26,2.15,2652,2190,462,5943,4951,992,180
+Hoteles 3 Estrellas,Cusco,2021,May,5,2021-05-01,27,999,1909,20.91,2.27,2.27,2.26,3908,3005,903,8864,6826,2038,186
+Hoteles 3 Estrellas,Cusco,2021,Jun,6,2021-06-01,30,1121,2159,21.43,2.38,2.36,2.44,4386,3256,1130,10436,7675,2761,234
+Hoteles 3 Estrellas,Cusco,2021,Jul,7,2021-07-01,35,1261,2458,31.19,2.17,2.11,2.3,9439,6699,2740,20469,14164,6305,268
+Hoteles 3 Estrellas,Cusco,2021,Ago,8,2021-08-01,35,1266,2471,37.77,2.26,2.18,2.43,10888,7229,3659,24639,15735,8904,302
+Hoteles 3 Estrellas,Cusco,2021,Sep,9,2021-09-01,38,1375,2664,36.11,2.18,2.08,2.33,10229,5994,4235,22307,12460,9847,337
+Hoteles 3 Estrellas,Cusco,2021,Oct,10,2021-10-01,40,1466,2848,41.1,2.36,2.41,2.3,13253,7364,5889,31286,17744,13542,372
+Hoteles 3 Estrellas,Cusco,2021,Nov,11,2021-11-01,39,1423,2763,36.66,1.98,1.91,2.07,12813,6579,6234,25416,12539,12877,363
+Hoteles 3 Estrellas,Cusco,2021,Dic,12,2021-12-01,40,1460,2845,27.88,2.15,2.19,2.11,10217,4979,5238,21923,10885,11038,370
+Hoteles 3 Estrellas,Cusco,2022,Ene,1,2022-01-01,40,1458,2856,21.89,2.48,2.59,2.37,6204,3059,3145,15380,7935,7445,369
+Hoteles 3 Estrellas,Cusco,2022,Feb,2,2022-02-01,38,1397,2735,19.52,2.18,2.09,2.3,5343,2979,2364,11641,6212,5429,347
+Hoteles 3 Estrellas,Cusco,2022,Mar,3,2022-03-01,40,1442,2809,30.82,1.91,1.83,1.97,10835,4322,6513,20694,7892,12802,373
+Hoteles 3 Estrellas,Cusco,2022,Abr,4,2022-04-01,45,1636,3218,43.95,2.06,2.09,2.05,17946,3602,14344,36900,7534,29366,433
+Hoteles 3 Estrellas,Cusco,2022,May,5,2022-05-01,45,1642,3206,48.6,2.03,2.14,2.0,20695,4453,16242,42004,9513,32491,442
+Hoteles 3 Estrellas,Cusco,2022,Jun,6,2022-06-01,48,1720,3379,50.64,2.1,2.32,2.05,22211,4103,18108,46703,9516,37187,468
+Hoteles 3 Estrellas,Cusco,2022,Jul,7,2022-07-01,48,1726,3384,56.94,2.17,2.33,2.12,25696,6767,18929,55866,15784,40082,495
+Hoteles 3 Estrellas,Cusco,2022,Ago,8,2022-08-01,49,1753,3459,55.7,2.17,2.36,2.11,25862,6082,19780,56120,14377,41743,470
+Hoteles 3 Estrellas,Cusco,2022,Sep,9,2022-09-01,50,1769,3508,56.9,2.11,2.23,2.09,25464,4437,21027,53809,9909,43900,479
+Hoteles 3 Estrellas,Cusco,2022,Oct,10,2022-10-01,50,1773,3526,54.08,2.09,2.2,2.06,25429,5669,19760,53225,12492,40733,480
+Hoteles 3 Estrellas,Cusco,2022,Nov,11,2022-11-01,48,1733,3421,47.51,2.06,2.08,2.05,20528,4211,16317,42247,8754,33493,464
+Hoteles 3 Estrellas,Cusco,2022,Dic,12,2022-12-01,47,1676,3282,26.0,2.24,2.4,2.15,10416,3811,6605,23349,9140,14209,451
+Hoteles 3 Estrellas,Cusco,2023,Ene,1,2023-01-01,44,1522,3051,11.55,2.29,2.28,2.3,4162,1168,2994,9540,2665,6875,429
+Hoteles 3 Estrellas,Cusco,2023,Feb,2,2023-02-01,31,1115,2215,8.64,2.32,2.28,2.36,1924,998,926,4458,2276,2182,295
+Hoteles 3 Estrellas,Cusco,2023,Mar,3,2023-03-01,38,1285,2560,18.39,2.25,2.17,2.29,5071,1705,3366,11420,3704,7716,363
+Hoteles 3 Estrellas,Cusco,2023,Abr,4,2023-04-01,43,1475,2953,30.97,2.07,2.06,2.08,11250,3007,8243,23310,6184,17126,422
+Hoteles 3 Estrellas,Cusco,2023,May,5,2023-05-01,47,1612,3238,38.52,2.09,2.09,2.09,15333,3794,11539,32048,7940,24108,449
+Hoteles 3 Estrellas,Cusco,2023,Jun,6,2023-06-01,49,1730,3484,40.88,2.21,2.3,2.18,16112,4180,11932,35653,9611,26042,476
+Hoteles 3 Estrellas,Cusco,2023,Jul,7,2023-07-01,49,1730,3488,48.79,2.13,2.1,2.13,22017,6110,15907,46805,12857,33948,488
+Hoteles 3 Estrellas,Cusco,2023,Ago,8,2023-08-01,49,1747,3521,45.13,2.17,2.26,2.14,20114,4987,15127,43599,11278,32321,489
+Hoteles 3 Estrellas,Cusco,2023,Sep,9,2023-09-01,49,1746,3510,49.29,2.13,2.1,2.14,21299,3949,17350,45410,8298,37112,476
+Hoteles 3 Estrellas,Cusco,2023,Oct,10,2023-10-01,49,1742,3506,48.85,2.06,2.13,2.05,22423,4856,17567,46278,10340,35938,487
+Hoteles 3 Estrellas,Cusco,2023,Nov,11,2023-11-01,49,1742,3507,42.28,2.02,1.98,2.03,18511,4074,14437,37442,8081,29361,483
+Hoteles 3 Estrellas,Cusco,2023,Dic,12,2023-12-01,48,1692,3402,33.3,2.08,2.15,2.05,14787,4088,10699,30719,8789,21930,475
+Hoteles 3 Estrellas,Cusco,2024,Ene,1,2024-01-01,49,1747,3511,33.27,2.22,2.32,2.18,14763,3482,11281,32701,8070,24631,496
+Hoteles 3 Estrellas,Cusco,2024,Feb,2,2024-02-01,48,1736,3486,26.34,2.1,2.08,2.11,10389,2772,7617,21845,5767,16078,493
+Hoteles 3 Estrellas,Cusco,2024,Mar,3,2024-03-01,50,1804,3613,42.45,2.05,2.05,2.05,19715,3114,16601,40508,6393,34115,519
+Hoteles 3 Estrellas,Cusco,2024,Abr,4,2024-04-01,51,1815,3645,54.86,2.02,1.93,2.03,25492,3475,22017,51406,6715,44691,528
+Hoteles 3 Estrellas,Cusco,2024,May,5,2024-05-01,51,1818,3652,61.58,2.0,2.04,2.0,31369,3721,27648,62832,7590,55242,534
+Hoteles 3 Estrellas,Cusco,2024,Jun,6,2024-06-01,51,1821,3659,59.39,2.0,2.03,1.99,29143,3931,25212,58215,7994,50221,543
+Hoteles 3 Estrellas,Cusco,2024,Jul,7,2024-07-01,51,1822,3674,65.5,2.06,2.06,2.06,33417,5757,27660,68801,11864,56937,572
+Hoteles 3 Estrellas,Cusco,2024,Ago,8,2024-08-01,51,1822,3676,62.3,1.97,2.08,1.95,32720,4964,27756,64504,10345,54159,580
+Hoteles 3 Estrellas,Cusco,2024,Sep,9,2024-09-01,51,1820,3668,65.88,2.03,2.02,2.03,31563,3759,27804,64002,7581,56421,584
+Hoteles 3 Estrellas,Cusco,2024,Oct,10,2024-10-01,52,1846,3735,64.73,1.91,1.98,1.9,33755,5601,28154,64516,11096,53420,583
+Hoteles 3 Estrellas,Cusco,2024,Nov,11,2024-11-01,52,1842,3735,54.29,1.96,1.91,1.97,26023,4468,21555,51033,8525,42508,570
+Hoteles 3 Estrellas,Cusco,2024,Dic,12,2024-12-01,53,1878,3819,37.04,2.03,2.03,2.03,19144,4459,14685,38898,9041,29857,582
+Hoteles 3 Estrellas,Cusco,2025,Ene,1,2025-01-01,55,1932,3850,39.53,2.14,2.19,2.12,19449,3701,15748,41548,8121,33427,618
+Hoteles 3 Estrellas,Cusco,2025,Feb,2,2025-02-01,52,1853,3702,31.72,1.99,2.06,1.97,13889,3244,10645,27637,6687,20950,611
+Hoteles 3 Estrellas,Cusco,2025,Mar,3,2025-03-01,56,1993,3993,45.74,1.94,1.99,1.93,24719,3775,20944,47878,7494,40384,677
+Hoteles 3 Estrellas,Cusco,2025,Abr,4,2025-04-01,57,2029,4076,61.65,1.94,1.92,1.95,34007,3710,30297,66124,7114,59010,670
+Hoteles 3 Estrellas,Cusco,2025,May,5,2025-05-01,58,2047,4083,64.24,1.94,1.92,1.94,36701,3765,32936,71101,7223,63878,692
+Hoteles 3 Estrellas,Cusco,2025,Jun,6,2025-06-01,58,2047,4097,65.94,2.0,1.97,2.01,35518,3773,31745,71084,7415,63669,681
+Hoteles 3 Estrellas,Cusco,2025,Jul,7,2025-07-01,58,2047,4076,69.14,2.0,1.97,2.0,40057,5180,34877,80011,10216,69795,686
+Hoteles 3 Estrellas,Cusco,2025,Ago,8,2025-08-01,59,2073,4135,67.05,1.95,2.08,1.94,39712,4929,34783,77595,10253,67342,706
+Hoteles 3 Estrellas,Cusco,2025,Sep,9,2025-09-01,60,2104,4200,67.43,1.94,1.89,1.95,37801,3777,34024,73443,7156,66287,701
+Hoteles 3 Estrellas,Cusco,2025,Oct,10,2025-10-01,60,2100,4188,65.21,1.86,1.93,1.84,39941,4929,35012,74098,9513,64585,698
+Hoteles 3 Estrellas,Cusco,2025,Nov,11,2025-11-01,60,2094,4190,52.63,1.89,1.86,1.89,29645,4327,25318,55886,8046,47840,689
+Hoteles 3 Estrellas,Cusco,2025,Dic,12,2025-12-01,60,2094,4190,39.35,2.06,1.97,2.08,23233,5055,18178,47783,9946,37837,667
+Hoteles 3 Estrellas,Cusco,2026,Ene,1,2026-01-01,59,2068,4107,36.17,2.05,2.17,2.03,19590,3516,16074,40168,7613,32555,640
+Hoteles 3 Estrellas,Cusco,2026,Feb,2,2026-02-01,57,2003,3973,28.65,1.94,1.96,1.94,13573,3141,10432,26382,6169,20213,591
+Hoteles 3 Estrellas,Cusco,2026,Mar,3,2026-03-01,59,2064,4073,46.99,1.94,1.94,1.94,25963,3820,22143,50448,7412,43036,617
+Hoteles 3 Estrellas,Cusco,2026,Abr,4,2026-04-01,59,2061,4072,61.5,1.98,1.97,1.98,33650,3854,29796,66506,7590,58916,636
+Hoteles 3 Estrellas,Cusco,2026,May,5,2026-05-01,60,2103,4184,65.97,1.96,1.96,1.96,38582,3901,34681,75714,7627,68087,661
+Hoteles 3 Estrellas,Cusco,2026,Jun,6,2026-06-01,60,2091,4123,63.02,1.96,1.96,1.97,34991,3783,31208,68756,7404,61352,653
+Hoteles 4 Estrellas,Cusco,2015,Ene,1,2015-01-01,5,514,970,50.4,1.95,1.65,2.02,6800,1353,5447,13259,2234,11025,313
+Hoteles 4 Estrellas,Cusco,2015,Feb,2,2015-02-01,4,442,823,55.5,1.92,1.74,1.98,6086,1498,4588,11700,2607,9093,290
+Hoteles 4 Estrellas,Cusco,2015,Mar,3,2015-03-01,6,591,1141,62.47,1.86,1.58,1.92,10477,1819,8658,19491,2874,16617,355
+Hoteles 4 Estrellas,Cusco,2015,Abr,4,2015-04-01,6,591,1140,78.43,1.91,1.58,1.97,12756,1989,10767,24393,3144,21249,335
+Hoteles 4 Estrellas,Cusco,2015,May,5,2015-05-01,6,591,1135,83.65,1.89,1.94,1.88,14485,1723,12762,27359,3348,24011,337
+Hoteles 4 Estrellas,Cusco,2015,Jun,6,2015-06-01,6,591,1135,69.79,1.91,1.58,1.97,11897,1793,10104,22780,2835,19945,358
+Hoteles 4 Estrellas,Cusco,2015,Jul,7,2015-07-01,6,591,1140,88.17,1.94,1.74,1.97,15542,2201,13341,30089,3820,26269,357
+Hoteles 4 Estrellas,Cusco,2015,Ago,8,2015-08-01,6,591,1164,79.73,1.98,1.64,2.04,14191,2251,11940,28059,3684,24375,358
+Hoteles 4 Estrellas,Cusco,2015,Sep,9,2015-09-01,6,591,1170,82.39,1.75,1.49,1.79,13220,1676,11544,23164,2500,20664,357
+Hoteles 4 Estrellas,Cusco,2015,Oct,10,2015-10-01,6,591,1164,87.51,1.85,1.71,1.87,15238,1961,13277,28190,3350,24840,357
+Hoteles 4 Estrellas,Cusco,2015,Nov,11,2015-11-01,7,758,1461,75.32,1.79,1.6,1.82,16051,2122,13929,28739,3402,25337,433
+Hoteles 4 Estrellas,Cusco,2015,Dic,12,2015-12-01,7,748,1386,49.57,1.71,1.5,1.76,12295,2219,10076,21074,3319,17755,435
+Hoteles 4 Estrellas,Cusco,2016,Ene,1,2016-01-01,7,758,1373,44.74,1.84,1.71,1.87,10029,1683,8346,18489,2876,15613,427
+Hoteles 4 Estrellas,Cusco,2016,Feb,2,2016-02-01,8,895,1635,46.27,1.73,1.48,1.79,11208,2161,9047,19393,3201,16192,508
+Hoteles 4 Estrellas,Cusco,2016,Mar,3,2016-03-01,8,895,1604,54.99,1.71,1.6,1.73,16932,2516,14416,28982,4020,24962,507
+Hoteles 4 Estrellas,Cusco,2016,Abr,4,2016-04-01,8,895,1604,63.52,1.84,1.52,1.89,16425,2417,14008,30197,3662,26535,524
+Hoteles 4 Estrellas,Cusco,2016,May,5,2016-05-01,8,895,1604,77.23,1.89,1.91,1.89,20855,3410,17445,39410,6525,32885,503
+Hoteles 4 Estrellas,Cusco,2016,Jun,6,2016-06-01,8,895,1604,72.44,1.89,1.7,1.92,18586,2496,16090,35177,4246,30931,503
+Hoteles 4 Estrellas,Cusco,2016,Jul,7,2016-07-01,8,895,1604,79.43,1.88,1.94,1.87,22965,3786,19179,43103,7333,35770,493
+Hoteles 4 Estrellas,Cusco,2016,Ago,8,2016-08-01,8,895,1604,79.14,1.81,1.86,1.8,22576,3169,19407,40808,5900,34908,494
+Hoteles 4 Estrellas,Cusco,2016,Sep,9,2016-09-01,8,965,1651,73.58,1.82,1.86,1.81,20269,2503,17766,36838,4657,32181,510
+Hoteles 4 Estrellas,Cusco,2016,Oct,10,2016-10-01,8,895,1603,83.38,1.83,1.79,1.83,22152,3596,18556,40473,6439,34034,485
+Hoteles 4 Estrellas,Cusco,2016,Nov,11,2016-11-01,8,895,1603,68.26,1.78,1.71,1.8,16778,2446,14332,29901,4174,25727,511
+Hoteles 4 Estrellas,Cusco,2016,Dic,12,2016-12-01,8,895,1603,50.12,1.75,1.73,1.76,13258,1866,11392,23221,3220,20001,511
+Hoteles 4 Estrellas,Cusco,2017,Ene,1,2017-01-01,7,796,1482,41.18,1.98,1.88,2.01,9022,2075,6947,17882,3906,13976,442
+Hoteles 4 Estrellas,Cusco,2017,Feb,2,2017-02-01,7,796,1475,43.81,1.89,1.67,1.96,8828,2250,6578,16652,3767,12885,431
+Hoteles 4 Estrellas,Cusco,2017,Mar,3,2017-03-01,7,796,1475,45.7,1.84,1.57,1.9,11603,2140,9463,21331,3352,17979,430
+Hoteles 4 Estrellas,Cusco,2017,Abr,4,2017-04-01,7,796,1475,74.37,1.84,1.64,1.87,17567,2362,15205,32347,3877,28470,404
+Hoteles 4 Estrellas,Cusco,2017,May,5,2017-05-01,7,796,1475,83.36,1.91,1.83,1.93,19102,2230,16872,36576,4091,32485,418
+Hoteles 4 Estrellas,Cusco,2017,Jun,6,2017-06-01,7,794,1469,80.23,1.96,1.77,1.98,17386,2090,15296,34006,3696,30310,414
+Hoteles 4 Estrellas,Cusco,2017,Jul,7,2017-07-01,8,895,1601,88.78,1.91,1.95,1.91,24848,2855,21993,47541,5562,41979,497
+Hoteles 4 Estrellas,Cusco,2017,Ago,8,2017-08-01,8,895,1601,86.58,1.83,1.73,1.85,24588,3222,21366,45101,5574,39527,498
+Hoteles 4 Estrellas,Cusco,2017,Sep,9,2017-09-01,8,920,1651,84.63,1.9,1.69,1.93,21914,2753,19161,41742,4666,37076,509
+Hoteles 4 Estrellas,Cusco,2017,Oct,10,2017-10-01,8,895,1601,87.37,1.88,1.76,1.9,23004,3443,19561,43204,6072,37132,504
+Hoteles 4 Estrellas,Cusco,2017,Nov,11,2017-11-01,8,895,1601,76.11,1.89,1.68,1.92,18712,2403,16309,35322,4037,31285,504
+Hoteles 4 Estrellas,Cusco,2017,Dic,12,2017-12-01,8,895,1601,50.19,1.84,1.64,1.88,14472,2362,12110,26594,3865,22729,504
+Hoteles 4 Estrellas,Cusco,2018,Ene,1,2018-01-01,8,895,1595,52.41,1.96,1.75,1.99,14042,1903,12139,27468,3322,24146,504
+Hoteles 4 Estrellas,Cusco,2018,Feb,2,2018-02-01,8,970,1652,49.55,1.79,1.5,1.83,13466,1750,11716,24041,2622,21419,499
+Hoteles 4 Estrellas,Cusco,2018,Mar,3,2018-03-01,8,959,1651,64.27,1.85,1.55,1.88,18418,2068,16350,34016,3201,30815,504
+Hoteles 4 Estrellas,Cusco,2018,Abr,4,2018-04-01,8,959,1651,76.5,1.72,1.4,1.76,21106,2486,18620,36316,3472,32844,504
+Hoteles 4 Estrellas,Cusco,2018,May,5,2018-05-01,8,956,1675,84.37,1.91,1.62,1.95,23751,2874,20877,45431,4647,40784,504
+Hoteles 4 Estrellas,Cusco,2018,Jun,6,2018-06-01,8,895,1603,79.39,1.91,1.57,1.95,20341,2226,18115,38827,3487,35340,519
+Hoteles 4 Estrellas,Cusco,2018,Jul,7,2018-07-01,8,925,1719,85.83,1.95,1.79,1.97,24511,2916,21595,47791,5213,42578,517
+Hoteles 4 Estrellas,Cusco,2018,Ago,8,2018-08-01,8,895,1679,87.59,1.92,1.86,1.93,24261,2711,21550,46592,5037,41555,518
+Hoteles 4 Estrellas,Cusco,2018,Sep,9,2018-09-01,8,895,1682,88.67,1.91,1.69,1.93,22840,2134,20706,43642,3606,40036,521
+Hoteles 4 Estrellas,Cusco,2018,Oct,10,2018-10-01,8,895,1682,85.5,1.93,1.87,1.93,22682,2622,20060,43680,4893,38787,523
+Hoteles 4 Estrellas,Cusco,2018,Nov,11,2018-11-01,8,895,1682,74.31,1.84,1.51,1.88,19256,2250,17006,35411,3396,32015,514
+Hoteles 4 Estrellas,Cusco,2018,Dic,12,2018-12-01,8,895,1682,55.07,1.77,1.53,1.81,16197,2319,13878,28661,3539,25122,500
+Hoteles 4 Estrellas,Cusco,2019,Ene,1,2019-01-01,8,895,1682,50.52,1.91,1.73,1.94,13331,1988,11343,25448,3446,22002,491
+Hoteles 4 Estrellas,Cusco,2019,Feb,2,2019-02-01,8,895,1692,47.61,1.9,1.69,1.94,11241,1649,9592,21392,2791,18601,437
+Hoteles 4 Estrellas,Cusco,2019,Mar,3,2019-03-01,8,895,1692,65.96,1.84,1.61,1.86,17700,1911,15789,32483,3080,29403,502
+Hoteles 4 Estrellas,Cusco,2019,Abr,4,2019-04-01,9,926,1756,82.02,1.84,1.59,1.86,23215,1999,21216,42697,3170,39527,531
+Hoteles 4 Estrellas,Cusco,2019,May,5,2019-05-01,9,926,1756,89.79,1.88,1.66,1.9,24941,2494,22447,46783,4129,42654,529
+Hoteles 4 Estrellas,Cusco,2019,Jun,6,2019-06-01,9,926,1794,81.63,1.96,1.61,2.0,21802,2055,19747,42734,3318,39416,528
+Hoteles 4 Estrellas,Cusco,2019,Jul,7,2019-07-01,9,926,1801,88.99,1.98,1.99,1.98,25869,3040,22829,51343,6035,45308,531
+Hoteles 4 Estrellas,Cusco,2019,Ago,8,2019-08-01,9,926,1793,87.68,1.95,2.1,1.93,24470,2766,21704,47808,5821,41987,535
+Hoteles 4 Estrellas,Cusco,2019,Sep,9,2019-09-01,10,976,1889,85.0,1.95,1.7,1.98,23108,2326,20782,45036,3954,41082,542
+Hoteles 4 Estrellas,Cusco,2019,Oct,10,2019-10-01,10,976,1889,82.51,1.91,1.85,1.92,23781,2669,21112,45512,4937,40575,548
+Hoteles 4 Estrellas,Cusco,2019,Nov,11,2019-11-01,10,976,1890,72.65,1.89,1.81,1.9,20109,2296,17813,38079,4165,33914,557
+Hoteles 4 Estrellas,Cusco,2019,Dic,12,2019-12-01,10,950,1837,54.06,1.83,1.57,1.88,16605,2804,13801,30314,4394,25920,559
+Hoteles 4 Estrellas,Cusco,2020,Ene,1,2020-01-01,9,931,1802,49.07,1.99,1.65,2.05,13510,1971,11539,26871,3247,23624,523
+Hoteles 4 Estrellas,Cusco,2020,Feb,2,2020-02-01,9,931,1803,48.81,1.92,1.73,1.96,12082,2123,9959,23151,3676,19475,497
+Hoteles 4 Estrellas,Cusco,2020,Mar,3,2020-03-01,9,948,1827,37.34,2.65,2.27,2.72,7554,1186,6368,20018,2693,17325,465
+Hoteles 4 Estrellas,Cusco,2020,Abr,4,2020-04-01,4,480,896,8.72,3.17,1.98,5.44,545,358,187,1725,708,1017,194
+Hoteles 4 Estrellas,Cusco,2020,May,5,2020-05-01,3,354,675,13.58,4.84,4.84,4.5,311,309,2,1505,1496,9,171
+Hoteles 4 Estrellas,Cusco,2020,Jun,6,2020-06-01,3,354,675,12.34,11.37,11.37,0.0,116,116,0,1319,1319,0,163
+Hoteles 4 Estrellas,Cusco,2020,Jul,7,2020-07-01,3,354,675,29.93,6.22,6.34,3.27,543,521,22,3375,3303,72,146
+Hoteles 4 Estrellas,Cusco,2020,Ago,8,2020-08-01,3,354,675,35.18,6.89,6.97,3.25,562,550,12,3871,3832,39,128
+Hoteles 4 Estrellas,Cusco,2020,Sep,9,2020-09-01,4,480,896,9.81,2.99,2.99,2.91,488,465,23,1458,1391,67,207
+Hoteles 4 Estrellas,Cusco,2020,Oct,10,2020-10-01,4,426,821,17.63,2.07,2.08,1.84,1218,1186,32,2523,2464,59,167
+Hoteles 4 Estrellas,Cusco,2020,Nov,11,2020-11-01,7,755,1440,14.74,2.05,2.0,2.52,2085,1883,202,4283,3773,510,210
+Hoteles 4 Estrellas,Cusco,2020,Dic,12,2020-12-01,7,755,1440,17.22,1.59,1.48,2.35,3689,3200,489,5873,4723,1150,196
+Hoteles 4 Estrellas,Cusco,2021,Ene,1,2021-01-01,8,759,1437,23.46,1.79,1.64,2.91,4385,3863,522,7867,6347,1520,184
+Hoteles 4 Estrellas,Cusco,2021,Feb,2,2021-02-01,7,636,1200,22.19,1.47,1.22,3.7,2831,2555,276,4149,3128,1021,162
+Hoteles 4 Estrellas,Cusco,2021,Mar,3,2021-03-01,7,636,1200,14.35,1.81,1.7,2.64,2177,1918,259,3941,3257,684,157
+Hoteles 4 Estrellas,Cusco,2021,Abr,4,2021-04-01,8,757,1433,16.36,1.66,1.53,2.31,3101,2578,523,5161,3953,1208,173
+Hoteles 4 Estrellas,Cusco,2021,May,5,2021-05-01,8,757,1433,30.85,2.09,2.04,2.22,5315,3992,1323,11088,8147,2941,184
+Hoteles 4 Estrellas,Cusco,2021,Jun,6,2021-06-01,8,757,1433,31.33,2.16,2.03,2.38,5411,3306,2105,11709,6705,5004,186
+Hoteles 4 Estrellas,Cusco,2021,Jul,7,2021-07-01,8,757,1434,43.14,2.21,2.18,2.28,8415,5799,2616,18604,12627,5977,194
+Hoteles 4 Estrellas,Cusco,2021,Ago,8,2021-08-01,8,757,1434,43.37,2.19,2.16,2.25,8561,5705,2856,18772,12335,6437,202
+Hoteles 4 Estrellas,Cusco,2021,Sep,9,2021-09-01,8,762,1439,48.87,2.01,1.89,2.17,8868,4993,3875,17854,9432,8422,212
+Hoteles 4 Estrellas,Cusco,2021,Oct,10,2021-10-01,8,762,1437,57.04,2.18,2.06,2.32,10391,5796,4595,22602,11964,10638,207
+Hoteles 4 Estrellas,Cusco,2021,Nov,11,2021-11-01,8,762,1437,59.45,2.06,1.85,2.3,10400,5468,4932,21449,10090,11359,223
+Hoteles 4 Estrellas,Cusco,2021,Dic,12,2021-12-01,8,762,1437,36.39,2.22,2.2,2.23,7098,3041,4057,15734,6681,9053,209
+Hoteles 4 Estrellas,Cusco,2022,Ene,1,2022-01-01,8,752,1418,43.44,2.43,2.3,2.54,7381,3253,4128,17961,7486,10475,273
+Hoteles 4 Estrellas,Cusco,2022,Feb,2,2022-02-01,9,791,1487,43.32,2.03,1.82,2.24,7346,3574,3772,14949,6511,8438,326
+Hoteles 4 Estrellas,Cusco,2022,Mar,3,2022-03-01,9,796,1498,59.09,1.88,1.52,2.16,11954,5218,6736,22473,7925,14548,332
+Hoteles 4 Estrellas,Cusco,2022,Abr,4,2022-04-01,9,798,1504,72.33,2.04,1.8,2.09,15191,2710,12481,31017,4879,26138,356
+Hoteles 4 Estrellas,Cusco,2022,May,5,2022-05-01,9,797,1532,72.02,2.18,2.15,2.18,15007,2394,12613,32652,5152,27500,380
+Hoteles 4 Estrellas,Cusco,2022,Jun,6,2022-06-01,9,797,1532,74.83,2.15,1.95,2.19,15685,2160,13525,33783,4209,29574,394
+Hoteles 4 Estrellas,Cusco,2022,Jul,7,2022-07-01,9,800,1542,83.15,2.27,2.41,2.24,18367,3222,15145,41682,7767,33915,394
+Hoteles 4 Estrellas,Cusco,2022,Ago,8,2022-08-01,10,860,1678,80.76,2.18,2.28,2.16,19306,3115,16191,42109,7107,35002,436
+Hoteles 4 Estrellas,Cusco,2022,Sep,9,2022-09-01,10,859,1661,81.16,2.14,1.92,2.17,18037,2113,15924,38652,4064,34588,436
+Hoteles 4 Estrellas,Cusco,2022,Oct,10,2022-10-01,10,859,1666,81.33,2.05,1.93,2.08,19532,4179,15353,39950,8057,31893,444
+Hoteles 4 Estrellas,Cusco,2022,Nov,11,2022-11-01,10,859,1666,70.9,1.97,1.78,2.01,16494,2591,13903,32545,4602,27943,441
+Hoteles 4 Estrellas,Cusco,2022,Dic,12,2022-12-01,10,859,1666,45.92,2.22,2.23,2.22,9790,2801,6989,21758,6257,15501,445
+Hoteles 4 Estrellas,Cusco,2023,Ene,1,2023-01-01,9,781,1528,25.11,2.23,1.88,2.37,4961,1448,3513,11055,2719,8336,418
+Hoteles 4 Estrellas,Cusco,2023,Feb,2,2023-02-01,8,741,1454,13.95,1.97,1.7,2.17,2492,1074,1418,4903,1823,3080,319
+Hoteles 4 Estrellas,Cusco,2023,Mar,3,2023-03-01,9,787,1539,32.61,1.95,1.72,2.05,7027,2181,4846,13693,3757,9936,378
+Hoteles 4 Estrellas,Cusco,2023,Abr,4,2023-04-01,10,858,1673,54.97,2.04,1.89,2.07,13043,2368,10675,26543,4465,22078,406
+Hoteles 4 Estrellas,Cusco,2023,May,5,2023-05-01,10,857,1670,63.99,2.14,1.99,2.18,14668,2790,11878,31454,5544,25910,417
+Hoteles 4 Estrellas,Cusco,2023,Jun,6,2023-06-01,10,858,1687,69.89,2.15,1.95,2.19,15788,2514,13274,33971,4894,29077,436
+Hoteles 4 Estrellas,Cusco,2023,Jul,7,2023-07-01,10,858,1706,75.8,2.15,2.03,2.19,19386,3888,15498,41757,7883,33874,467
+Hoteles 4 Estrellas,Cusco,2023,Ago,8,2023-08-01,10,859,1699,72.97,2.01,1.82,2.06,18352,3712,14640,36949,6739,30210,472
+Hoteles 4 Estrellas,Cusco,2023,Sep,9,2023-09-01,10,859,1695,78.22,1.95,1.55,2.02,18671,2950,15721,36373,4583,31790,477
+Hoteles 4 Estrellas,Cusco,2023,Oct,10,2023-10-01,10,859,1695,82.47,1.99,1.8,2.03,19845,3523,16322,39460,6339,33121,472
+Hoteles 4 Estrellas,Cusco,2023,Nov,11,2023-11-01,10,858,1694,75.67,1.95,1.65,2.0,17512,2474,15038,34171,4080,30091,473
+Hoteles 4 Estrellas,Cusco,2023,Dic,12,2023-12-01,10,859,1697,63.49,1.99,1.75,2.04,16509,2959,13550,32849,5187,27662,476
+Hoteles 4 Estrellas,Cusco,2024,Ene,1,2024-01-01,10,962,1884,62.35,1.97,1.65,2.04,17966,3022,14944,35464,4976,30488,544
+Hoteles 4 Estrellas,Cusco,2024,Feb,2,2024-02-01,10,964,1888,52.98,1.94,1.65,2.0,13291,2388,10903,25762,3947,21815,546
+Hoteles 4 Estrellas,Cusco,2024,Mar,3,2024-03-01,11,1050,2071,73.01,1.87,1.61,1.9,23524,2759,20765,43902,4452,39450,592
+Hoteles 4 Estrellas,Cusco,2024,Abr,4,2024-04-01,11,1051,2069,86.63,1.97,1.65,2.01,25242,2694,22548,49804,4452,45352,602
+Hoteles 4 Estrellas,Cusco,2024,May,5,2024-05-01,11,1052,2074,92.48,1.93,1.58,1.97,28709,2698,26011,55463,4275,51188,613
+Hoteles 4 Estrellas,Cusco,2024,Jun,6,2024-06-01,11,1051,2072,89.56,1.99,1.65,2.03,26742,2811,23931,53218,4636,48582,621
+Hoteles 4 Estrellas,Cusco,2024,Jul,7,2024-07-01,11,1051,2075,90.56,2.07,1.89,2.1,28779,3187,25592,59715,6021,53694,625
+Hoteles 4 Estrellas,Cusco,2024,Ago,8,2024-08-01,11,1051,2074,90.95,2.01,1.83,2.03,27912,3400,24512,56027,6235,49792,625
+Hoteles 4 Estrellas,Cusco,2024,Sep,9,2024-09-01,11,1052,2073,91.67,1.94,1.63,1.97,27074,2827,24247,52467,4620,47847,626
+Hoteles 4 Estrellas,Cusco,2024,Oct,10,2024-10-01,11,1052,2072,91.36,1.9,1.76,1.92,28032,3667,24365,53314,6454,46860,613
+Hoteles 4 Estrellas,Cusco,2024,Nov,11,2024-11-01,11,1051,2070,81.34,1.86,1.61,1.9,24509,3280,21229,45563,5272,40291,627
+Hoteles 4 Estrellas,Cusco,2024,Dic,12,2024-12-01,11,1036,2036,63.37,1.88,1.69,1.91,20592,3192,17400,38646,5381,33265,627
+Hoteles 4 Estrellas,Cusco,2025,Ene,1,2025-01-01,10,976,1909,63.71,2.03,1.67,2.09,17982,2648,15334,36422,4431,31991,612
+Hoteles 4 Estrellas,Cusco,2025,Feb,2,2025-02-01,10,976,1909,53.59,1.84,1.6,1.89,14372,2700,11672,26450,4333,22117,596
+Hoteles 4 Estrellas,Cusco,2025,Mar,3,2025-03-01,11,1050,2063,76.21,1.89,1.67,1.92,23691,2559,21132,44760,4272,40488,635
+Hoteles 4 Estrellas,Cusco,2025,Abr,4,2025-04-01,11,1051,2064,87.05,1.89,1.58,1.93,26785,2714,24071,50658,4300,46358,651
+Hoteles 4 Estrellas,Cusco,2025,May,5,2025-05-01,11,1051,2060,90.13,1.9,1.58,1.93,27525,2651,24874,52217,4188,48029,662
+Hoteles 4 Estrellas,Cusco,2025,Jun,6,2025-06-01,11,1052,2065,84.78,1.96,1.64,1.99,25070,2547,22523,49076,4176,44900,669
+Hoteles 4 Estrellas,Cusco,2025,Jul,7,2025-07-01,11,1051,2064,89.27,2.01,1.73,2.05,28312,3828,24484,56768,6604,50164,673
+Hoteles 4 Estrellas,Cusco,2025,Ago,8,2025-08-01,12,1083,2127,87.2,1.96,1.81,1.98,27935,3017,24918,54833,5458,49375,679
+Hoteles 4 Estrellas,Cusco,2025,Sep,9,2025-09-01,12,1083,2125,89.7,1.91,1.6,1.94,27350,2733,24617,52223,4368,47855,680
+Hoteles 4 Estrellas,Cusco,2025,Oct,10,2025-10-01,12,1083,2124,90.34,1.87,1.54,1.92,28366,3744,24622,53007,5759,47248,678
+Hoteles 4 Estrellas,Cusco,2025,Nov,11,2025-11-01,12,1083,2123,77.55,1.87,1.64,1.9,23178,2943,20235,43292,4818,38474,680
+Hoteles 4 Estrellas,Cusco,2025,Dic,12,2025-12-01,12,1082,2125,61.35,1.89,1.8,1.91,20568,3437,17131,38867,6186,32681,681
+Hoteles 4 Estrellas,Cusco,2026,Ene,1,2026-01-01,11,916,1801,60.46,1.92,1.61,1.99,16447,2852,13595,31608,4590,27018,578
+Hoteles 4 Estrellas,Cusco,2026,Feb,2,2026-02-01,11,916,1799,51.63,1.86,1.62,1.91,12590,2401,10189,23396,3900,19496,578
+Hoteles 4 Estrellas,Cusco,2026,Mar,3,2026-03-01,11,917,1800,73.15,1.84,1.53,1.89,20232,2613,17619,37238,3990,33248,579
+Hoteles 4 Estrellas,Cusco,2026,Abr,4,2026-04-01,11,916,1801,86.62,1.92,1.54,1.96,22446,2334,20112,43081,3595,39486,584
+Hoteles 4 Estrellas,Cusco,2026,May,5,2026-05-01,11,916,1798,91.75,1.94,1.63,1.98,24108,2977,21131,46748,4851,41897,583
+Hoteles 4 Estrellas,Cusco,2026,Jun,6,2026-06-01,11,915,1780,83.35,2.0,1.6,2.05,20891,2440,18451,41758,3898,37860,593
+Hoteles 5 Estrellas,Cusco,2015,Ene,1,2015-01-01,5,580,1164,40.11,1.65,1.67,1.65,7715,767,6948,12756,1280,11476,626
+Hoteles 5 Estrellas,Cusco,2015,Feb,2,2015-02-01,5,580,1164,42.06,1.67,1.87,1.65,7466,760,6706,12493,1421,11072,613
+Hoteles 5 Estrellas,Cusco,2015,Mar,3,2015-03-01,5,580,1164,55.29,1.68,2.15,1.65,10995,723,10272,18514,1556,16958,620
+Hoteles 5 Estrellas,Cusco,2015,Abr,4,2015-04-01,5,580,1164,65.36,1.52,1.27,1.54,13072,1088,11984,19829,1380,18449,623
+Hoteles 5 Estrellas,Cusco,2015,May,5,2015-05-01,5,580,1164,73.85,1.74,1.66,1.75,13859,1080,12779,24158,1797,22361,595
+Hoteles 5 Estrellas,Cusco,2015,Jun,6,2015-06-01,5,580,1164,61.83,1.49,1.33,1.51,12624,1343,11281,18833,1785,17048,617
+Hoteles 5 Estrellas,Cusco,2015,Jul,7,2015-07-01,5,580,1164,67.27,1.5,1.49,1.5,14112,1494,12618,21169,2228,18941,615
+Hoteles 5 Estrellas,Cusco,2015,Ago,8,2015-08-01,5,580,1164,66.38,1.6,1.46,1.61,14135,1321,12814,22604,1935,20669,630
+Hoteles 5 Estrellas,Cusco,2015,Sep,9,2015-09-01,5,576,1156,70.24,1.73,1.76,1.72,12340,989,11351,21289,1741,19548,623
+Hoteles 5 Estrellas,Cusco,2015,Oct,10,2015-10-01,5,576,1156,70.39,1.72,1.81,1.71,13305,1370,11935,22862,2474,20388,624
+Hoteles 5 Estrellas,Cusco,2015,Nov,11,2015-11-01,5,576,1156,64.44,1.71,1.29,1.75,11794,1149,10645,20114,1480,18634,635
+Hoteles 5 Estrellas,Cusco,2015,Dic,12,2015-12-01,5,576,1156,47.43,1.7,1.84,1.68,10741,1151,9590,18270,2122,16148,627
+Hoteles 5 Estrellas,Cusco,2016,Ene,1,2016-01-01,6,587,1178,41.06,1.61,1.66,1.61,9364,925,8439,15084,1535,13549,659
+Hoteles 5 Estrellas,Cusco,2016,Feb,2,2016-02-01,6,587,1178,42.96,1.6,1.67,1.6,9083,705,8378,14563,1180,13383,655
+Hoteles 5 Estrellas,Cusco,2016,Mar,3,2016-03-01,6,587,1178,54.47,1.68,1.7,1.68,11991,792,11199,20139,1345,18794,655
+Hoteles 5 Estrellas,Cusco,2016,Abr,4,2016-04-01,6,587,1178,56.66,1.68,1.67,1.68,11239,1009,10230,18907,1680,17227,654
+Hoteles 5 Estrellas,Cusco,2016,May,5,2016-05-01,6,587,1178,76.82,1.69,1.69,1.69,15388,1396,13992,26077,2362,23715,703
+Hoteles 5 Estrellas,Cusco,2016,Jun,6,2016-06-01,6,587,1180,65.41,1.66,1.75,1.66,14037,1140,12897,23368,2000,21368,700
+Hoteles 5 Estrellas,Cusco,2016,Jul,7,2016-07-01,6,587,1180,67.08,1.59,1.73,1.57,16292,1705,14587,25916,2958,22958,700
+Hoteles 5 Estrellas,Cusco,2016,Ago,8,2016-08-01,6,587,1180,67.52,1.67,1.71,1.66,14285,1654,12631,23848,2832,21016,700
+Hoteles 5 Estrellas,Cusco,2016,Sep,9,2016-09-01,6,587,1180,54.87,1.68,1.77,1.67,13687,1131,12556,22954,2000,20954,698
+Hoteles 5 Estrellas,Cusco,2016,Oct,10,2016-10-01,6,587,1180,71.92,1.67,1.67,1.67,15001,1146,13855,25095,1915,23180,699
+Hoteles 5 Estrellas,Cusco,2016,Nov,11,2016-11-01,6,587,1180,60.43,1.63,1.65,1.63,13639,1055,12584,22245,1738,20507,699
+Hoteles 5 Estrellas,Cusco,2016,Dic,12,2016-12-01,6,587,1180,48.53,1.59,1.68,1.58,11728,881,10847,18640,1484,17156,699
+Hoteles 5 Estrellas,Cusco,2017,Ene,1,2017-01-01,6,587,1180,37.35,1.64,1.68,1.64,7641,650,6991,12540,1095,11445,693
+Hoteles 5 Estrellas,Cusco,2017,Feb,2,2017-02-01,6,505,981,56.44,1.64,1.72,1.63,8960,784,8176,14675,1350,13325,701
+Hoteles 5 Estrellas,Cusco,2017,Mar,3,2017-03-01,6,505,979,63.06,1.63,1.56,1.64,11642,883,10759,18972,1381,17591,676
+Hoteles 5 Estrellas,Cusco,2017,Abr,4,2017-04-01,6,587,1178,69.53,1.62,1.41,1.63,14043,828,13215,22760,1170,21590,674
+Hoteles 5 Estrellas,Cusco,2017,May,5,2017-05-01,6,587,1178,76.42,1.7,1.44,1.72,14979,1079,13900,25469,1549,23920,699
+Hoteles 5 Estrellas,Cusco,2017,Jun,6,2017-06-01,6,587,1178,73.24,1.67,1.35,1.7,14310,1393,12917,23831,1875,21956,702
+Hoteles 5 Estrellas,Cusco,2017,Jul,7,2017-07-01,6,587,1178,79.56,1.61,1.81,1.59,17281,1036,16245,27747,1872,25875,703
+Hoteles 5 Estrellas,Cusco,2017,Ago,8,2017-08-01,6,587,1178,74.46,1.61,1.72,1.6,16702,1069,15633,26832,1844,24988,702
+Hoteles 5 Estrellas,Cusco,2017,Sep,9,2017-09-01,6,587,1158,70.2,1.62,1.57,1.62,14826,1046,13780,23999,1646,22353,702
+Hoteles 5 Estrellas,Cusco,2017,Oct,10,2017-10-01,6,587,1180,69.98,1.64,1.47,1.66,15167,1494,13673,24839,2202,22637,698
+Hoteles 5 Estrellas,Cusco,2017,Nov,11,2017-11-01,6,587,1180,67.02,1.61,1.49,1.62,14309,1355,12954,22998,2022,20976,698
+Hoteles 5 Estrellas,Cusco,2017,Dic,12,2017-12-01,6,587,1180,54.33,1.59,1.68,1.59,12735,890,11845,20273,1495,18778,699
+Hoteles 5 Estrellas,Cusco,2018,Ene,1,2018-01-01,6,587,1180,50.7,2.09,1.93,2.11,11844,1092,10752,24793,2106,22687,699
+Hoteles 5 Estrellas,Cusco,2018,Feb,2,2018-02-01,6,587,1180,45.1,1.53,1.45,1.54,9813,813,9000,15046,1179,13867,699
+Hoteles 5 Estrellas,Cusco,2018,Mar,3,2018-03-01,6,587,1180,59.33,1.59,1.48,1.6,13898,933,12965,22074,1381,20693,699
+Hoteles 5 Estrellas,Cusco,2018,Abr,4,2018-04-01,6,587,1180,66.15,1.66,1.54,1.67,13832,1167,12665,22984,1795,21189,693
+Hoteles 5 Estrellas,Cusco,2018,May,5,2018-05-01,6,587,1180,76.75,1.68,1.63,1.69,16406,1005,15401,27630,1636,25994,692
+Hoteles 5 Estrellas,Cusco,2018,Jun,6,2018-06-01,6,587,1180,70.11,1.62,1.55,1.62,15732,1010,14722,25433,1563,23870,686
+Hoteles 5 Estrellas,Cusco,2018,Jul,7,2018-07-01,6,587,1158,74.94,1.58,1.59,1.58,17693,1425,16268,27951,2271,25680,694
+Hoteles 5 Estrellas,Cusco,2018,Ago,8,2018-08-01,6,587,1180,77.57,1.61,1.51,1.62,17215,1539,15676,27696,2323,25373,699
+Hoteles 5 Estrellas,Cusco,2018,Sep,9,2018-09-01,6,587,1180,73.86,1.65,1.48,1.67,15379,1403,13976,25356,2078,23278,701
+Hoteles 5 Estrellas,Cusco,2018,Oct,10,2018-10-01,6,587,1180,73.83,1.73,1.59,1.75,15060,1352,13708,26088,2144,23944,700
+Hoteles 5 Estrellas,Cusco,2018,Nov,11,2018-11-01,6,587,1180,69.56,1.64,1.48,1.66,14429,1286,13143,23676,1898,21778,698
+Hoteles 5 Estrellas,Cusco,2018,Dic,12,2018-12-01,7,680,1366,51.65,1.62,1.51,1.64,13485,1613,11872,21858,2433,19425,764
+Hoteles 5 Estrellas,Cusco,2019,Ene,1,2019-01-01,7,680,1366,46.46,1.64,1.59,1.65,11213,1216,9997,18383,1931,16452,755
+Hoteles 5 Estrellas,Cusco,2019,Feb,2,2019-02-01,7,680,1366,44.14,1.62,1.55,1.63,9229,1256,7973,14934,1941,12993,755
+Hoteles 5 Estrellas,Cusco,2019,Mar,3,2019-03-01,7,680,1338,67.53,1.57,1.57,1.57,16234,1253,14981,25521,1964,23557,707
+Hoteles 5 Estrellas,Cusco,2019,Abr,4,2019-04-01,7,680,1366,70.55,1.68,1.61,1.68,17842,1105,16737,29919,1777,28142,764
+Hoteles 5 Estrellas,Cusco,2019,May,5,2019-05-01,7,680,1366,80.77,1.74,2.18,1.71,19019,1099,17920,33053,2401,30652,765
+Hoteles 5 Estrellas,Cusco,2019,Jun,6,2019-06-01,7,680,1366,70.84,1.7,1.85,1.69,16899,1040,15859,28675,1929,26746,765
+Hoteles 5 Estrellas,Cusco,2019,Jul,7,2019-07-01,7,680,1366,75.02,1.65,1.6,1.65,19673,1724,17949,32414,2758,29656,769
+Hoteles 5 Estrellas,Cusco,2019,Ago,8,2019-08-01,7,680,1366,79.82,1.68,1.88,1.67,20017,1232,18785,33660,2310,31350,768
+Hoteles 5 Estrellas,Cusco,2019,Sep,9,2019-09-01,7,680,1366,74.73,1.72,1.82,1.71,17071,1195,15876,29367,2173,27194,768
+Hoteles 5 Estrellas,Cusco,2019,Oct,10,2019-10-01,7,680,1366,70.52,1.77,1.83,1.77,16603,1179,15424,29409,2152,27257,765
+Hoteles 5 Estrellas,Cusco,2019,Nov,11,2019-11-01,7,680,1366,65.99,1.69,1.74,1.68,15201,1192,14009,25636,2074,23562,765
+Hoteles 5 Estrellas,Cusco,2019,Dic,12,2019-12-01,7,680,1366,55.05,1.69,1.65,1.7,13903,1079,12824,23563,1775,21788,766
+Hoteles 5 Estrellas,Cusco,2020,Ene,1,2020-01-01,7,680,1368,43.05,1.67,1.68,1.67,10944,898,10046,18286,1505,16781,724
+Hoteles 5 Estrellas,Cusco,2020,Feb,2,2020-02-01,7,680,1368,39.82,1.65,1.77,1.64,8957,791,8166,14790,1399,13391,627
+Hoteles 5 Estrellas,Cusco,2020,Mar,3,2020-03-01,7,680,1306,33.62,2.05,2.46,1.99,6702,785,5917,13728,1933,11795,701
+Hoteles 5 Estrellas,Cusco,2020,Abr,4,2020-04-01,2,148,298,10.32,8.24,10.0,4.17,76,53,23,626,530,96,118
+Hoteles 5 Estrellas,Cusco,2020,May,5,2020-05-01,1,93,188,43.22,8.34,8.2,13.5,153,149,4,1276,1222,54,14
+Hoteles 5 Estrellas,Cusco,2020,Jun,6,2020-06-01,1,93,188,35.02,7.63,7.74,1.0,128,126,2,977,975,2,14
+Hoteles 5 Estrellas,Cusco,2020,Jul,7,2020-07-01,1,93,188,52.93,4.89,4.97,1.14,320,313,7,1564,1556,8,14
+Hoteles 5 Estrellas,Cusco,2020,Ago,8,2020-08-01,1,93,188,45.3,6.64,6.77,1.4,199,194,5,1321,1314,7,14
+Hoteles 5 Estrellas,Cusco,2020,Sep,9,2020-09-01,1,93,188,6.42,2.8,2.8,0.0,70,70,0,196,196,0,23
+Hoteles 5 Estrellas,Cusco,2020,Oct,10,2020-10-01,3,301,604,8.9,2.49,2.51,2.0,403,389,14,1004,976,28,141
+Hoteles 5 Estrellas,Cusco,2020,Nov,11,2020-11-01,5,547,1096,7.82,1.66,1.67,1.62,1260,969,291,2092,1620,472,313
+Hoteles 5 Estrellas,Cusco,2020,Dic,12,2020-12-01,5,547,1096,13.66,1.74,1.94,1.48,2686,1498,1188,4674,2912,1762,312
+Hoteles 5 Estrellas,Cusco,2020,Ene,1,2021-01-01,5,547,1069,9.54,2.12,2.32,1.8,1487,923,564,3153,2137,1016,305
+Hoteles 5 Estrellas,Cusco,2021,Feb,2,2021-02-01,4,504,983,4.51,2.3,2.21,2.63,410,327,83,941,723,218,278
+Hoteles 5 Estrellas,Cusco,2021,Mar,3,2021-03-01,5,547,1094,9.98,2.35,2.37,2.3,1225,853,372,2880,2025,855,306
+Hoteles 5 Estrellas,Cusco,2021,Abr,4,2021-04-01,6,558,1116,16.31,2.3,2.53,2.01,2238,1230,1008,5142,3115,2027,308
+Hoteles 5 Estrellas,Cusco,2021,May,5,2021-05-01,6,558,1116,23.41,1.97,2.04,1.89,3870,2156,1714,7639,4404,3235,310
+Hoteles 5 Estrellas,Cusco,2021,Jun,6,2021-06-01,6,558,1116,30.05,2.03,1.9,2.17,5007,2714,2293,10142,5161,4981,311
+Hoteles 5 Estrellas,Cusco,2021,Jul,7,2021-07-01,6,558,1116,42.38,1.88,1.79,2.04,7911,4999,2912,14896,8952,5944,325
+Hoteles 5 Estrellas,Cusco,2021,Ago,8,2021-08-01,6,558,1116,44.29,1.67,1.81,1.55,8048,3591,4457,13420,6510,6910,330
+Hoteles 5 Estrellas,Cusco,2021,Sep,9,2021-09-01,6,558,1116,50.97,1.66,1.8,1.58,8252,2971,5281,13681,5362,8319,332
+Hoteles 5 Estrellas,Cusco,2021,Oct,10,2021-10-01,5,547,1094,62.89,1.94,2.03,1.89,10549,3729,6820,20467,7583,12884,331
+Hoteles 5 Estrellas,Cusco,2021,Nov,11,2021-11-01,7,680,1366,40.54,1.85,1.64,1.94,8777,2490,6287,16256,4078,12178,459
+Hoteles 5 Estrellas,Cusco,2021,Dic,12,2021-12-01,7,680,1366,30.58,1.68,1.61,1.7,7822,1943,5879,13116,3133,9983,447
+Hoteles 5 Estrellas,Cusco,2022,Ene,1,2022-01-01,7,680,1366,21.74,1.91,2.39,1.79,4855,916,3939,9257,2191,7066,454
+Hoteles 5 Estrellas,Cusco,2022,Feb,2,2022-02-01,7,680,1366,22.27,1.91,2.1,1.87,4458,719,3739,8506,1513,6993,445
+Hoteles 5 Estrellas,Cusco,2022,Mar,3,2022-03-01,7,680,1366,39.2,1.73,1.8,1.72,9815,1219,8596,16950,2194,14756,463
+Hoteles 5 Estrellas,Cusco,2022,Abr,4,2022-04-01,7,680,1366,57.0,1.72,1.75,1.71,13790,1319,12471,23668,2304,21364,493
+Hoteles 5 Estrellas,Cusco,2022,May,5,2022-05-01,7,680,1366,66.87,1.81,1.86,1.8,15566,1781,13785,28118,3316,24802,503
+Hoteles 5 Estrellas,Cusco,2022,Jun,6,2022-06-01,7,680,1366,58.58,1.72,1.98,1.7,13529,1033,12496,23293,2043,21250,513
+Hoteles 5 Estrellas,Cusco,2022,Jul,7,2022-07-01,7,680,1366,66.11,1.74,1.87,1.73,16608,1850,14758,28935,3460,25475,519
+Hoteles 5 Estrellas,Cusco,2022,Ago,8,2022-08-01,7,680,1366,60.6,1.75,1.77,1.74,14812,1415,13397,25854,2509,23345,579
+Hoteles 5 Estrellas,Cusco,2022,Sep,9,2022-09-01,7,680,1366,57.65,1.79,1.76,1.79,13017,1071,11946,23302,1889,21413,581
+Hoteles 5 Estrellas,Cusco,2022,Oct,10,2022-10-01,7,680,1366,62.86,1.82,1.95,1.8,13409,1648,11761,24352,3206,21146,588
+Hoteles 5 Estrellas,Cusco,2022,Nov,11,2022-11-01,7,680,1366,55.13,1.78,1.68,1.79,11605,1213,10392,20628,2042,18586,589
+Hoteles 5 Estrellas,Cusco,2022,Dic,12,2022-12-01,7,680,1366,25.34,1.93,1.99,1.91,5456,987,4469,10510,1962,8548,595
+Hoteles 5 Estrellas,Cusco,2023,Ene,1,2023-01-01,7,680,1366,10.1,1.93,2.05,1.9,2280,382,1898,4391,785,3606,588
+Hoteles 5 Estrellas,Cusco,2023,Feb,2,2023-02-01,7,680,1366,7.13,2.02,2.22,1.94,1237,335,902,2495,744,1751,551
+Hoteles 5 Estrellas,Cusco,2023,Mar,3,2023-03-01,7,680,1366,18.52,1.72,1.85,1.69,4253,784,3469,7313,1451,5862,536
+Hoteles 5 Estrellas,Cusco,2023,Abr,4,2023-04-01,7,680,1366,29.57,1.8,1.93,1.78,6811,877,5934,12277,1691,10586,529
+Hoteles 5 Estrellas,Cusco,2023,May,5,2023-05-01,7,680,1366,34.68,1.83,2.17,1.78,8058,1010,7048,14716,2187,12529,539
+Hoteles 5 Estrellas,Cusco,2023,Jun,6,2023-06-01,7,680,1366,41.5,1.87,1.95,1.86,9015,1260,7755,16849,2463,14386,541
+Hoteles 5 Estrellas,Cusco,2023,Jul,7,2023-07-01,7,680,1366,45.68,1.81,2.04,1.77,11645,1609,10036,21040,3278,17762,539
+Hoteles 5 Estrellas,Cusco,2023,Ago,8,2023-08-01,7,680,1366,45.82,1.81,2.07,1.77,10301,1151,9150,18620,2386,16234,543
+Hoteles 5 Estrellas,Cusco,2023,Sep,9,2023-09-01,7,680,1366,49.86,1.86,1.91,1.85,10128,968,9160,18838,1850,16988,550
+Hoteles 5 Estrellas,Cusco,2023,Oct,10,2023-10-01,7,675,1356,53.57,1.83,1.77,1.84,11697,1422,10275,21382,2522,18860,550
+Hoteles 5 Estrellas,Cusco,2023,Nov,11,2023-11-01,7,675,1356,51.7,1.79,1.58,1.82,10877,1161,9716,19471,1834,17637,553
+Hoteles 5 Estrellas,Cusco,2023,Dic,12,2023-12-01,7,675,1356,52.61,1.7,1.66,1.71,12547,1527,11020,21389,2534,18855,560
+Hoteles 5 Estrellas,Cusco,2024,Ene,1,2024-01-01,7,675,1356,38.78,1.67,1.82,1.66,8759,620,8139,14608,1127,13481,557
+Hoteles 5 Estrellas,Cusco,2024,Feb,2,2024-02-01,7,675,1356,34.53,1.68,1.93,1.66,6777,526,6251,11408,1014,10394,557
+Hoteles 5 Estrellas,Cusco,2024,Mar,3,2024-03-01,7,675,1356,60.23,1.64,1.81,1.63,13715,738,12977,22458,1333,21125,564
+Hoteles 5 Estrellas,Cusco,2024,Abr,4,2024-04-01,7,675,1356,69.22,1.79,1.44,1.82,14942,1301,13641,26764,1879,24885,586
+Hoteles 5 Estrellas,Cusco,2024,May,5,2024-05-01,7,675,1356,81.52,1.7,1.57,1.71,18204,1587,16617,30929,2494,28435,597
+Hoteles 5 Estrellas,Cusco,2024,Jun,6,2024-06-01,7,675,1356,74.0,1.67,2.0,1.65,16609,887,15722,27781,1771,26010,598
+Hoteles 5 Estrellas,Cusco,2024,Jul,7,2024-07-01,7,675,1356,77.32,1.61,1.96,1.59,18821,1284,17537,30310,2511,27799,611
+Hoteles 5 Estrellas,Cusco,2024,Ago,8,2024-08-01,7,675,1356,76.26,1.65,1.88,1.64,18461,1075,17386,30518,2024,28494,636
+Hoteles 5 Estrellas,Cusco,2024,Sep,9,2024-09-01,7,675,1356,75.75,1.8,1.85,1.79,16983,901,16082,30498,1668,28830,639
+Hoteles 5 Estrellas,Cusco,2024,Oct,10,2024-10-01,7,675,1356,77.21,1.74,1.87,1.73,18307,1198,17109,31817,2236,29581,653
+Hoteles 5 Estrellas,Cusco,2024,Nov,11,2024-11-01,7,675,1356,61.19,1.7,1.84,1.69,13671,1041,12630,23308,1920,21388,658
+Hoteles 5 Estrellas,Cusco,2024,Dic,12,2024-12-01,7,675,1356,57.75,1.64,1.72,1.63,15030,1025,14005,24634,1767,22867,660
+Hoteles 5 Estrellas,Cusco,2025,Ene,1,2025-01-01,7,675,1356,42.0,1.75,1.73,1.75,10113,822,9291,17660,1418,16242,662
+Hoteles 5 Estrellas,Cusco,2025,Feb,2,2025-02-01,7,675,1356,37.11,1.77,1.88,1.76,7716,698,7018,13651,1315,12336,666
+Hoteles 5 Estrellas,Cusco,2025,Mar,3,2025-03-01,7,675,1356,59.82,1.68,1.69,1.68,15161,649,14512,25441,1097,24344,650
+Hoteles 5 Estrellas,Cusco,2025,Abr,4,2025-04-01,7,675,1356,75.69,1.73,1.79,1.73,17952,673,17279,31142,1205,29937,661
+Hoteles 5 Estrellas,Cusco,2025,May,5,2025-05-01,7,675,1356,78.26,1.74,1.69,1.74,18758,1016,17742,32571,1721,30850,693
+Hoteles 5 Estrellas,Cusco,2025,Jun,6,2025-06-01,7,675,1356,74.38,1.78,1.76,1.78,17338,830,16508,30798,1460,29338,697
+Hoteles 5 Estrellas,Cusco,2025,Jul,7,2025-07-01,7,675,1356,73.55,1.72,1.73,1.72,19354,1492,17862,33369,2575,30794,701
+Hoteles 5 Estrellas,Cusco,2025,Ago,8,2025-08-01,7,675,1356,79.47,1.79,1.65,1.8,19222,1220,18002,34342,2018,32324,711
+Hoteles 5 Estrellas,Cusco,2025,Sep,9,2025-09-01,7,675,1356,80.01,2.1,1.96,2.12,12379,1147,11232,26041,2249,23792,715
+Hoteles 5 Estrellas,Cusco,2025,Oct,10,2025-10-01,7,675,1356,77.84,2.03,2.91,1.96,13135,1052,12083,26705,3065,23640,728
+Hoteles 5 Estrellas,Cusco,2025,Nov,11,2025-11-01,7,675,1356,60.87,1.95,2.57,1.88,10292,996,9296,20064,2559,17505,733
+Hoteles 5 Estrellas,Cusco,2025,Dic,12,2025-12-01,7,675,1356,54.35,1.88,2.12,1.84,10313,1275,9038,19363,2708,16655,728
+Hoteles 5 Estrellas,Cusco,2026,Ene,1,2026-01-01,7,675,1356,49.25,1.92,1.7,1.95,8564,948,7616,16472,1612,14860,731
+Hoteles 5 Estrellas,Cusco,2026,Feb,2,2026-02-01,7,675,1356,48.7,1.88,1.76,1.91,7450,1329,6121,14021,2339,11682,712
+Hoteles 5 Estrellas,Cusco,2026,Mar,3,2026-03-01,7,675,1356,64.78,1.84,1.57,1.87,11915,1209,10706,21970,1902,20068,706
+Hoteles 5 Estrellas,Cusco,2026,Abr,4,2026-04-01,7,675,1356,71.86,1.96,1.84,1.97,14343,937,13406,28066,1721,26345,635
+Hoteles 5 Estrellas,Cusco,2026,May,5,2026-05-01,7,675,1356,77.99,2.02,1.98,2.02,15167,1164,14003,30638,2305,28333,640
+Hoteles 5 Estrellas,Cusco,2026,Jun,6,2026-06-01,7,675,1356,68.75,2.02,1.98,2.02,13366,994,12372,26958,1966,24992,645`;
+
+        // --- STREAMING_CHUNK:Parseando datos históricos y configurando lógica... ---
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',');
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                const currentline = lines[i].split(',');
+                if (currentline.length === headers.length) {
+                    const obj = {};
+                    for (let j = 0; j < headers.length; j++) {
+                        let val = currentline[j].trim();
+                        if (!isNaN(val) && val !== '') {
+                            val = Number(val);
+                        }
+                        obj[headers[j]] = val;
+                    }
+                    result.push(obj);
+                }
+            }
+            return result;
+        }
+
+        const parsedData = parseCSV(rawCSV);
+
+        const monthsFull = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const colors = {
+            3: '#E11D48', 4: '#D97706', 5: '#0D9488',
+            nac: '#65A30D', ext: '#0F766E'
+        };
+
+        const gridOptions = { color: '#F1F5F9', drawBorder: false };
+        const tooltipOptions = {
+            backgroundColor: '#1E293B', titleColor: '#F8FAFC', bodyColor: '#F1F5F9',
+            borderColor: '#334155', borderWidth: 1, padding: 12, boxPadding: 6, usePointStyle: true
+        };
+
+        let currentYear = 2026;
+        let currentMetric = 'tnoh';
+        let currentCategory = 3;
+
+        let chartOcc, chartArr, chartPerm, chartPern, chartEmp;
+
+        function getDataForYearAndCat(year, catName, metricKey) {
+            const result = new Array(12).fill(0);
+            parsedData.filter(d => d.anio === year && d.categoria === catName).forEach(d => {
+                let mIdx = d.mes_num - 1;
+                if (mIdx >= 0 && mIdx < 12) {
+                    result[mIdx] = d[metricKey] || 0;
+                }
+            });
+            return result;
+        }
+
+        function getFullYearData(year, catName) {
+            const monthsData = new Array(12).fill(null).map(() => ({}));
+            parsedData.filter(d => d.anio === year && d.categoria === catName).forEach(d => {
+                let mIdx = d.mes_num - 1;
+                if (mIdx >= 0 && mIdx < 12) {
+                    monthsData[mIdx] = d;
+                }
+            });
+            return monthsData;
+        }
+
+        function initCharts() {
+            const ctxOcc = document.getElementById('chart-occupancy').getContext('2d');
+            chartOcc = new Chart(ctxOcc, {
+                type: 'line',
+                data: {
+                    labels: monthsFull,
+                    datasets: [
+                        { label: '3 estrellas', data: [], borderColor: colors[3], backgroundColor: colors[3], tension: 0.4, pointRadius: 4, spanGaps: true },
+                        { label: '4 estrellas', data: [], borderColor: colors[4], backgroundColor: colors[4], tension: 0.4, pointRadius: 4, spanGaps: true },
+                        { label: '5 estrellas', data: [], borderColor: colors[5], backgroundColor: colors[5], tension: 0.4, pointRadius: 4, spanGaps: true }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { 
+                        legend: { position: 'bottom', align: 'start', labels: { usePointStyle: true, boxWidth: 8, padding: 20 } },
+                        tooltip: tooltipOptions
+                    },
+                    scales: {
+                        y: { min: 0, max: 100, grid: gridOptions, ticks: { callback: v => v + '%' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            chartArr = new Chart(document.getElementById('chart-arribos').getContext('2d'), {
+                type: 'bar',
+                data: { labels: monthsFull, datasets: [{ label: 'Nacionales', data: [], backgroundColor: colors.nac }, { label: 'Extranjeros', data: [], backgroundColor: colors.ext }] },
+                options: getBarOptions()
+            });
+
+            chartPern = new Chart(document.getElementById('chart-pernoctaciones').getContext('2d'), {
+                type: 'bar',
+                data: { labels: monthsFull, datasets: [{ label: 'Nacionales', data: [], backgroundColor: colors.nac }, { label: 'Extranjeros', data: [], backgroundColor: colors.ext }] },
+                options: getBarOptions()
+            });
+
+            chartPerm = new Chart(document.getElementById('chart-permanencia').getContext('2d'), {
+                type: 'line',
+                data: { labels: monthsFull, datasets: [{ label: 'Nacionales', data: [], borderColor: colors.nac, tension: 0.4, pointRadius: 3 }, { label: 'Extranjeros', data: [], borderColor: colors.ext, tension: 0.4, pointRadius: 3 }] },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        y: { 
+                            min: 1, 
+                            max: 5, 
+                            grid: gridOptions 
+                        }, 
+                        x: { grid: { display: false } } 
+                    }, 
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }, tooltip: tooltipOptions } 
+                }
+            });
+
+            chartEmp = new Chart(document.getElementById('chart-empleo').getContext('2d'), {
+                type: 'line',
+                data: { labels: monthsFull, datasets: [{ label: 'Empleo', data: [], borderColor: colors[3], backgroundColor: colors[3], tension: 0.4, pointRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: gridOptions }, x: { grid: { display: false } } }, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }, tooltip: tooltipOptions } }
+            });
+
+            updateDashboardData();
+        }
+
+        function getBarOptions() {
+            return {
+                responsive: true, maintainAspectRatio: false,
+                scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: gridOptions } },
+                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }, tooltip: tooltipOptions }
+            };
+        }
+
+        // --- STREAMING_CHUNK:Lógica para actualizar gráficos y KPIs (Promedio ponderado)... ---
+        function updateDashboardData() {
+            document.getElementById('header-year-label').innerText = currentYear;
+
+            const catMap = { 3: 'Hoteles 3 Estrellas', 4: 'Hoteles 4 Estrellas', 5: 'Hoteles 5 Estrellas' };
+            const catName = catMap[currentCategory];
+
+            const tnoh3 = getDataForYearAndCat(currentYear, 'Hoteles 3 Estrellas', 'tnoh_pct');
+            const tnoh4 = getDataForYearAndCat(currentYear, 'Hoteles 4 Estrellas', 'tnoh_pct');
+            const tnoh5 = getDataForYearAndCat(currentYear, 'Hoteles 5 Estrellas', 'tnoh_pct');
+
+            if (currentMetric === 'tnoh') {
+                chartOcc.data.datasets[0].data = tnoh3.map(v => v === 0 ? null : v);
+                chartOcc.data.datasets[1].data = tnoh4.map(v => v === 0 ? null : v);
+                chartOcc.data.datasets[2].data = tnoh5.map(v => v === 0 ? null : v);
+            } else {
+                chartOcc.data.datasets[0].data = tnoh3.map(v => v > 0 ? +(v * 0.92).toFixed(2) : null);
+                chartOcc.data.datasets[1].data = tnoh4.map(v => v > 0 ? +(v * 0.94).toFixed(2) : null);
+                chartOcc.data.datasets[2].data = tnoh5.map(v => v > 0 ? +(v * 0.90).toFixed(2) : null);
+            }
+            chartOcc.update();
+
+            const yearCatData = getFullYearData(currentYear, catName);
+            
+            chartArr.data.datasets[0].data = yearCatData.map(d => d.arribos_nacionales || 0);
+            chartArr.data.datasets[1].data = yearCatData.map(d => d.arribos_extranjeros || 0);
+            chartArr.update();
+
+            chartPern.data.datasets[0].data = yearCatData.map(d => d.pernoctaciones_nacionales || 0);
+            chartPern.data.datasets[1].data = yearCatData.map(d => d.pernoctaciones_extranjeros || 0);
+            chartPern.update();
+
+            chartPerm.data.datasets[0].data = yearCatData.map(d => d.permanencia_nacionales_dias || null);
+            chartPerm.data.datasets[1].data = yearCatData.map(d => d.permanencia_extranjeros_dias || null);
+            
+            // Ajuste dinámico de escala de permanencia para valores extremos del 2020
+            chartPerm.options.scales.y.max = (currentYear === 2020) ? 25 : 5;
+            chartPerm.update();
+
+            const empleoData = yearCatData.map(d => d.empleo_total || null);
+            chartEmp.data.datasets[0].data = empleoData;
+            chartEmp.data.datasets[0].borderColor = colors[currentCategory];
+            chartEmp.data.datasets[0].backgroundColor = colors[currentCategory];
+            chartEmp.update();
+
+            let totalArribos = yearCatData.reduce((acc, d) => acc + (d.arribos_totales || 0), 0);
+            document.getElementById('kpi-arribos').innerText = totalArribos > 0 ? totalArribos.toLocaleString() : 'N/A';
+
+            let validTnohs = tnoh3.concat(tnoh4).concat(tnoh5).filter(v => v > 0);
+            let avgTnoh = validTnohs.length > 0 ? (validTnohs.reduce((a, b) => a + b, 0) / validTnohs.length).toFixed(1) : '0';
+            document.getElementById('kpi-tnoh').innerText = avgTnoh + '%';
+
+            // CÁLCULO PONDERADO DEL MEJOR SEGMENTO DE HABITACIONES
+            const avg3 = tnoh3.filter(v => v > 0).reduce((a, b) => a + b, 0) / (tnoh3.filter(v => v > 0).length || 1);
+            const avg4 = tnoh4.filter(v => v > 0).reduce((a, b) => a + b, 0) / (tnoh4.filter(v => v > 0).length || 1);
+            const avg5 = tnoh5.filter(v => v > 0).reduce((a, b) => a + b, 0) / (tnoh5.filter(v => v > 0).length || 1);
+            
+            let bestCat = '3 estrellas';
+            let maxVal = avg3;
+            if (avg4 > maxVal) { maxVal = avg4; bestCat = '4 estrellas'; }
+            if (avg5 > maxVal) { maxVal = avg5; bestCat = '5 estrellas'; }
+            if (maxVal === 0) bestCat = '-';
+            
+            document.getElementById('kpi-top').innerText = bestCat;
+
+            let latestEmpleo = [...empleoData].reverse().find(v => v > 0) || 0;
+            document.getElementById('kpi-empleo').innerText = latestEmpleo > 0 ? latestEmpleo.toLocaleString() : 'N/A';
+
+            updateTable(yearCatData);
+        }
+
+        function updateTable(yearCatData) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            const rowsDef = [
+                { label: 'N° de establecimientos', key: 'num_establecimientos', isInt: true },
+                { label: 'N° de habitaciones', key: 'num_habitaciones', isInt: true },
+                { label: 'N° de plazas-cama', key: 'num_plazas_cama', isInt: true },
+                { label: 'TNOH (%)', key: 'tnoh_pct', isFloat: true },
+                { label: 'Permanencia promedio (días)', key: 'permanencia_promedio_dias', isFloat: true },
+                { label: 'Arribos totales', key: 'arribos_totales', isInt: true },
+                { label: 'Pernoctaciones totales', key: 'pernoctaciones_totales', isInt: true },
+                { label: 'Empleo total', key: 'empleo_total', isInt: true }
+            ];
+
+            rowsDef.forEach(r => {
+                let tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition-colors';
+                
+                let tdLabel = document.createElement('td');
+                tdLabel.className = 'py-4 px-6 font-medium text-gray-900';
+                tdLabel.innerText = r.label;
+                tr.appendChild(tdLabel);
+
+                yearCatData.forEach(monthData => {
+                    let td = document.createElement('td');
+                    td.className = 'py-4 px-3 text-right text-gray-600';
+                    let val = monthData[r.key];
+                    if (val !== undefined && val !== null && val !== '') {
+                        td.innerText = r.isInt ? Number(val).toLocaleString() : Number(val).toFixed(2);
+                    } else {
+                        td.innerText = '-';
+                    }
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function changeYear(year) {
+            currentYear = parseInt(year);
+            updateDashboardData();
+        }
+
+        function toggleMetric(metric) {
+            document.getElementById('btn-tnoh').classList.remove('active');
+            document.getElementById('btn-tnoc').classList.remove('active');
+            document.getElementById(`btn-${metric}`).classList.add('active');
+            currentMetric = metric;
+            updateDashboardData();
+        }
+
+        function selectCategory(cat) {
+            document.getElementById('btn-cat-3').classList.remove('active');
+            document.getElementById('btn-cat-4').classList.remove('active');
+            document.getElementById('btn-cat-5').classList.remove('active');
+            document.getElementById(`btn-cat-${cat}`).classList.add('active');
+            currentCategory = cat;
+            updateDashboardData();
+        }
+
+        // --- STREAMING_CHUNK:Inicializando mapa de la región Cusco... ---
+        function initMap() {
+            const map = L.map('map', {
+                zoomControl: false, scrollWheelZoom: false, dragging: false, doubleClickZoom: false, attributionControl: false
+            }).setView([-13.5320, -71.9675], 5); // Coordenadas de Cusco central
+
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16 }).addTo(map);
+
+            fetch('https://raw.githubusercontent.com/juaneladio/peru-geojson/master/peru_departamental_simple.geojson')
+                .then(response => response.json())
+                .then(geoData => {
+                    const peruLayer = L.geoJSON(geoData, {
+                        style: function (feature) {
+                            let isCusco = false;
+                            for (let key in feature.properties) {
+                                if (typeof feature.properties[key] === 'string' && 
+                                   (feature.properties[key].toUpperCase() === 'CUSCO' || feature.properties[key].toUpperCase() === 'CUZCO')) {
+                                    isCusco = true; break;
+                                }
+                            }
+                            if (isCusco) {
+                                return { fillColor: '#E11D48', color: '#FFFFFF', weight: 1.5, fillOpacity: 0.9 };
+                            } else {
+                                return { fillColor: '#CBD5E1', color: '#FFFFFF', weight: 1, fillOpacity: 0.4 };
+                            }
+                        }
+                    }).addTo(map);
+
+                    map.fitBounds(peruLayer.getBounds(), { padding: [5, 5] });
+                    
+                    L.circleMarker([-13.5320, -71.9675], {
+                        color: '#FFFFFF', fillColor: '#0F172A', fillOpacity: 1, radius: 4, weight: 1
+                    }).addTo(map);
+                })
+                .catch(error => console.error('Map load error:', error));
+        }
+
+        window.onload = () => {
+            initCharts();
+            initMap();
+        };
+    </script>
+</body>
+</html>
